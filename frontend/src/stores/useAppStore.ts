@@ -46,6 +46,16 @@ interface AppStoreState {
   restorationData: RestorationSimulation | null;
   isLoadingRestoration: boolean;
 
+  // Satellite Swipe & Visual Difference Inspection
+  isSwipeMode: boolean;
+  setIsSwipeMode: (enabled: boolean) => void;
+  swipePosition: number; // 0 to 100%
+  setSwipePosition: (pos: number) => void;
+  maskOpacity: number; // 0.0 to 1.0
+  setMaskOpacity: (opacity: number) => void;
+  showSatelliteOverlay: boolean;
+  setShowSatelliteOverlay: (show: boolean) => void;
+
   // System Health / Transparency
   systemHealth: any | null;
 
@@ -113,6 +123,16 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   restorationData: null,
   isLoadingRestoration: false,
 
+  // Satellite Swipe & Visual Difference Inspection defaults
+  isSwipeMode: false,
+  setIsSwipeMode: (enabled) => set({ isSwipeMode: enabled }),
+  swipePosition: 50,
+  setSwipePosition: (pos) => set({ swipePosition: pos }),
+  maskOpacity: 0.55,
+  setMaskOpacity: (opacity) => set({ maskOpacity: opacity }),
+  showSatelliteOverlay: true,
+  setShowSatelliteOverlay: (show) => set({ showSatelliteOverlay: show }),
+
   isExplorerOpen: false,
   setIsExplorerOpen: (open) => set({ isExplorerOpen: open }),
   isTelemetryOpen: true,
@@ -129,7 +149,6 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     try {
       const lakes = await api.getLakes();
       set({ lakes, isLoadingLakes: false });
-      // If none selected, default to Bellandur Lake as prime demonstration
       if (!get().selectedLakeId && lakes.length > 0) {
         const bellandur = lakes.find((l) => l.id === 'lake-bellandur') || lakes[0];
         get().selectLake(bellandur.id);
@@ -162,7 +181,6 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
         },
       });
 
-      // If at least 2 observations, precompute comparison
       if (observations.length >= 2) {
         const older = observations[0].id;
         const newer = observations[observations.length - 1].id;
@@ -182,10 +200,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       const baseline = observations[0].id;
       const current = observations[index]?.id;
       if (index === 0) {
-        // At the earliest baseline observation (e.g. 2017), lake is at initial water spread (no encroachment)
         set({ comparisonData: null, comparisonOlderId: baseline, comparisonNewerId: baseline });
       } else if (current) {
-        // Automatically compute & display what has been encroached / lost to human settlements up to this year
         get().runComparison(baseline, current);
       }
     }
@@ -218,10 +234,10 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
 
     set({ isLoadingRestoration: true });
     try {
-      const res = await api.simulateRestoration(selectedLakeId, pct);
-      set({ restorationData: res, isLoadingRestoration: false });
+      const sim = await api.simulateRestoration(selectedLakeId, pct);
+      set({ restorationData: sim, isLoadingRestoration: false });
     } catch (err) {
-      console.error('Restoration simulation failed', err);
+      console.error('Failed to simulate restoration', err);
       set({ isLoadingRestoration: false });
     }
   },
@@ -230,21 +246,19 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     try {
       const health = await api.getHealth();
       set({ systemHealth: health });
-    } catch (e) {
-      console.warn('Backend health check error', e);
+    } catch (err) {
+      console.error('Failed to fetch system health', err);
     }
   },
 
   resetCameraToBengaluru: () => {
     set({
-      selectedLakeId: null,
-      selectedLake: null,
       cameraTarget: {
-        center: [77.6200, 12.9800],
-        zoom: 11.5,
+        center: [77.6300, 12.9600],
+        zoom: 11.2,
         pitch: 35,
-        bearing: 0,
-      },
+        bearing: -10,
+      }
     });
-  },
+  }
 }));

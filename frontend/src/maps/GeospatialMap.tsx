@@ -1,12 +1,38 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import {
+  Layers,
+  Sliders,
+  Eye,
+  EyeOff,
+  SplitSquareVertical,
+  Calendar,
+  AlertTriangle,
+  CheckCircle2,
+  Sparkles
+} from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 
+// GEE & Satellite Tile Sources by Year
+const SATELLITE_YEAR_TILES: Record<string, string> = {
+  '2017': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/a8627d48c6f5b5770d0a6caee378b758-f342b72bc846fed06e5b377eeeb1778d/tiles/{z}/{x}/{y}',
+  '2019': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/e4fd1c803cb99632c055db244f332f81-82d54ebf1d65ef66f5e0fd3ba85eccde/tiles/{z}/{x}/{y}',
+  '2021': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/4672992e2608c7723bf2d4ae0a19f8f1-d97bbbc563ed8b4b550b750010d39eff/tiles/{z}/{x}/{y}',
+  '2023': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/515bc66b96e4617167c1d9fa967d020b-9828741dc7d78bd99c07e50c468864b0/tiles/{z}/{x}/{y}',
+  '2024': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}'
+};
+
+const ESRI_SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LABELS_URL = 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+
 export const GeospatialMap: React.FC = () => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const hoverPopupRef = useRef<maplibregl.Popup | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const swipeContainerRef = useRef<HTMLDivElement>(null);
+  const mapMainRef = useRef<maplibregl.Map | null>(null);
+  const mapBeforeRef = useRef<maplibregl.Map | null>(null);
+
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const {
     lakes,
@@ -18,45 +44,105 @@ export const GeospatialMap: React.FC = () => {
     activeScreen,
     layers,
     cameraTarget,
-    selectLake
+    selectLake,
+    isSwipeMode,
+    setIsSwipeMode,
+    swipePosition,
+    setSwipePosition,
+    maskOpacity,
+    setMaskOpacity,
+    showSatelliteOverlay,
+    setShowSatelliteOverlay
   } = useAppStore();
 
   const currentObservation = observations[selectedObservationIndex] || null;
+  const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2024';
 
-  // 1. Initialize Map
+  // 1. Initialize Main Map
   useEffect(() => {
-    if (!mapContainer.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapMainRef.current) return;
 
-    // Dark geospatial style with high-resolution global satellite tiles (Esri World Imagery)
     const map = new maplibregl.Map({
-      container: mapContainer.current,
+      container: mapContainerRef.current,
       style: {
         version: 8,
         sources: {
           'esri-satellite': {
             type: 'raster',
-            tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-            ],
+            tiles: [ESRI_SATELLITE_URL],
             tileSize: 256,
-            attribution: '© Esri, Maxar, Earthstar Geographics'
+            attribution: '© Esri, Maxar'
+          },
+          'gee-2017': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2017']],
+            tileSize: 256
+          },
+          'gee-2019': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2019']],
+            tileSize: 256
+          },
+          'gee-2021': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2021']],
+            tileSize: 256
+          },
+          'gee-2023': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2023']],
+            tileSize: 256
+          },
+          'gee-2024': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2024']],
+            tileSize: 256
           },
           'esri-labels': {
             type: 'raster',
-            tiles: [
-              'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
-            ],
-            tileSize: 256,
-            attribution: '© Esri'
+            tiles: [ESRI_LABELS_URL],
+            tileSize: 256
           }
         },
         layers: [
+          // Base Satellite Layer: Contemporary High-Res Esri
           {
-            id: 'satellite-layer',
+            id: 'base-esri-satellite',
             type: 'raster',
             source: 'esri-satellite',
             minzoom: 0,
             maxzoom: 20
+          },
+          // Multi-Temporal Sentinel-2 True-Color Layers
+          {
+            id: 'layer-gee-2017',
+            type: 'raster',
+            source: 'gee-2017',
+            layout: { visibility: 'none' }
+          },
+          {
+            id: 'layer-gee-2019',
+            type: 'raster',
+            source: 'gee-2019',
+            layout: { visibility: 'none' }
+          },
+          {
+            id: 'layer-gee-2021',
+            type: 'raster',
+            source: 'gee-2021',
+            layout: { visibility: 'none' }
+          },
+          {
+            id: 'layer-gee-2023',
+            type: 'raster',
+            source: 'gee-2023',
+            layout: { visibility: 'none' }
+          },
+          {
+            id: 'layer-gee-2024',
+            type: 'raster',
+            source: 'gee-2024',
+            layout: { visibility: 'none' }
           },
           {
             id: 'labels-layer',
@@ -67,7 +153,7 @@ export const GeospatialMap: React.FC = () => {
           }
         ]
       },
-      center: [77.6300, 12.9600], // Bengaluru Center
+      center: [77.6300, 12.9600],
       zoom: 11.2,
       pitch: 35,
       bearing: -10,
@@ -109,7 +195,7 @@ export const GeospatialMap: React.FC = () => {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Layer 1: All 185 Lake Boundaries (Color-coded: Red for Encroached, Green for Intrusion-Free)
+      // Layer 1: All 185 Lake Boundaries (Red for Encroached, Green for Free)
       map.addLayer({
         id: 'all-lakes-fill',
         type: 'fill',
@@ -153,7 +239,7 @@ export const GeospatialMap: React.FC = () => {
         }
       });
 
-      // Layer 3: Detected Water Extent (Current Observation Year)
+      // Layer 3: Detected Water Extent
       map.addLayer({
         id: 'detected-water-fill',
         type: 'fill',
@@ -174,14 +260,14 @@ export const GeospatialMap: React.FC = () => {
         }
       });
 
-      // Layer 4: Difference Layers (Accommodated by Human Encroachment / Lost Lakebed)
+      // Layer 4: Difference Layers (Encroachment & Settlement Loss)
       map.addLayer({
         id: 'lost-water-fill',
         type: 'fill',
         source: 'comparison-lost',
         paint: {
           'fill-color': '#EF4444',
-          'fill-opacity': 0.65
+          'fill-opacity': maskOpacity
         }
       });
 
@@ -227,13 +313,12 @@ export const GeospatialMap: React.FC = () => {
         }
       });
 
-      // Hover Tooltip Popup for All 185 Lakes
+      // Interactive Hover Popup
       const hoverPopup = new maplibregl.Popup({
         closeButton: false,
         closeOnClick: false,
         className: 'lake-hover-popup'
       });
-      hoverPopupRef.current = hoverPopup;
 
       map.on('mousemove', 'all-lakes-fill', (e) => {
         if (e.features && e.features[0]) {
@@ -256,7 +341,7 @@ export const GeospatialMap: React.FC = () => {
                 <div style="font-weight:700;font-size:12px;color:#F2F5F2;margin-bottom:2px;">${p?.name}</div>
                 <div style="color:#8D9A9A;font-size:10px;margin-bottom:6px;">Zone: ${p?.zone || 'Bengaluru'} • Basin: ${p?.area} ha</div>
                 ${statusBadge}
-                <div style="margin-top:6px;font-size:9.5px;color:#6B7280;">Click to zoom & inspect encroachment history</div>
+                <div style="margin-top:6px;font-size:9.5px;color:#6B7280;">Click to zoom & inspect multi-temporal change</div>
               </div>
             `)
             .addTo(map);
@@ -268,7 +353,6 @@ export const GeospatialMap: React.FC = () => {
         hoverPopup.remove();
       });
 
-      // Click on any lake polygon to select and fly directly to it
       map.on('click', 'all-lakes-fill', (e) => {
         if (e.features && e.features[0]) {
           const featureId = e.features[0].properties?.id;
@@ -276,7 +360,6 @@ export const GeospatialMap: React.FC = () => {
         }
       });
 
-      // Click on lost water / human encroachment zone for detailed breakdown
       map.on('click', 'lost-water-fill', (e) => {
         new maplibregl.Popup({ closeButton: true, className: 'encroachment-popup' })
           .setLngLat(e.lngLat)
@@ -292,27 +375,130 @@ export const GeospatialMap: React.FC = () => {
           `)
           .addTo(map);
       });
-
-      map.on('mouseenter', 'lost-water-fill', () => {
-        map.getCanvas().style.cursor = 'help';
-      });
-      map.on('mouseleave', 'lost-water-fill', () => {
-        map.getCanvas().style.cursor = '';
-      });
     });
 
-    mapRef.current = map;
+    mapMainRef.current = map;
 
     return () => {
       map.remove();
-      mapRef.current = null;
+      mapMainRef.current = null;
     };
   }, []);
 
-  // 2. Update All 185 Lakes GeoJSON Source
+  // 2. Initialize Secondary "Before (2017)" Map for Swipe Mode
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!isSwipeMode) {
+      if (mapBeforeRef.current) {
+        mapBeforeRef.current.remove();
+        mapBeforeRef.current = null;
+      }
+      return;
+    }
+
+    if (!swipeContainerRef.current || mapBeforeRef.current) return;
+
+    const centerObj = mapMainRef.current ? mapMainRef.current.getCenter() : { lng: 77.6300, lat: 12.9600 };
+    const mainZoom = mapMainRef.current ? mapMainRef.current.getZoom() : 13;
+    const mainPitch = mapMainRef.current ? mapMainRef.current.getPitch() : 0;
+    const mainBearing = mapMainRef.current ? mapMainRef.current.getBearing() : 0;
+
+    const mapBefore = new maplibregl.Map({
+      container: swipeContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'gee-2017-baseline': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2017']],
+            tileSize: 256,
+            attribution: 'Sentinel-2 2017 Baseline'
+          },
+          'esri-labels-before': {
+            type: 'raster',
+            tiles: [ESRI_LABELS_URL],
+            tileSize: 256
+          }
+        },
+        layers: [
+          {
+            id: 'before-satellite',
+            type: 'raster',
+            source: 'gee-2017-baseline'
+          },
+          {
+            id: 'before-labels',
+            type: 'raster',
+            source: 'esri-labels-before'
+          }
+        ]
+      },
+      center: [centerObj.lng, centerObj.lat],
+      zoom: mainZoom,
+      pitch: mainPitch,
+      bearing: mainBearing,
+      interactive: false
+    });
+
+    // Synchronize cameras between Main (After) and Before
+    if (mapMainRef.current) {
+      let isSyncing = false;
+      mapMainRef.current.on('move', () => {
+        if (isSyncing || !mapBefore) return;
+        isSyncing = true;
+        mapBefore.jumpTo({
+          center: mapMainRef.current!.getCenter(),
+          zoom: mapMainRef.current!.getZoom(),
+          pitch: mapMainRef.current!.getPitch(),
+          bearing: mapMainRef.current!.getBearing()
+        });
+        isSyncing = false;
+      });
+    }
+
+    mapBeforeRef.current = mapBefore;
+
+    return () => {
+      mapBefore.remove();
+      mapBeforeRef.current = null;
+    };
+  }, [isSwipeMode]);
+
+  // 3. Update Satellite Imagery Tiles when Year Changes on Timeline
+  useEffect(() => {
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
+    if (!map.isStyleLoaded()) return;
+
+    const years = ['2017', '2019', '2021', '2023', '2024'];
+    years.forEach((y) => {
+      const layerId = `layer-gee-${y}`;
+      if (map.getLayer(layerId)) {
+        const isTarget = y === currentYear && showSatelliteOverlay;
+        map.setLayoutProperty(layerId, 'visibility', isTarget ? 'visible' : 'none');
+      }
+    });
+
+    // If viewing 2024 without overlay, contemporary Esri high-res is active
+    if (map.getLayer('base-esri-satellite')) {
+      map.setLayoutProperty('base-esri-satellite', 'visibility', layers.satellite ? 'visible' : 'none');
+    }
+  }, [currentYear, showSatelliteOverlay, layers.satellite]);
+
+  // 4. Update Encroachment Mask Opacity
+  useEffect(() => {
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
+    if (!map.isStyleLoaded()) return;
+
+    if (map.getLayer('lost-water-fill')) {
+      map.setPaintProperty('lost-water-fill', 'fill-opacity', maskOpacity);
+    }
+  }, [maskOpacity]);
+
+  // 5. Update All 185 Lakes GeoJSON
+  useEffect(() => {
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
     const source = map.getSource('all-lakes') as maplibregl.GeoJSONSource;
@@ -342,10 +528,10 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [lakes]);
 
-  // 3. Update Camera Target with smooth flyTo
+  // 6. Update Camera Target
   useEffect(() => {
-    if (!mapRef.current || !cameraTarget) return;
-    mapRef.current.flyTo({
+    if (!mapMainRef.current || !cameraTarget) return;
+    mapMainRef.current.flyTo({
       center: cameraTarget.center,
       zoom: cameraTarget.zoom,
       pitch: cameraTarget.pitch,
@@ -355,13 +541,12 @@ export const GeospatialMap: React.FC = () => {
     });
   }, [cameraTarget]);
 
-  // 4. Update Selected Lake Cadastre & Detected Water Extent
+  // 7. Update Selected Lake Cadastre & Detected Water Extent
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
-    // A. Update Cadastral Boundary
     const cadastreSource = map.getSource('selected-lake-cadastre') as maplibregl.GeoJSONSource;
     if (cadastreSource) {
       if (selectedLake && selectedLake.boundary_geometry) {
@@ -380,7 +565,6 @@ export const GeospatialMap: React.FC = () => {
       }
     }
 
-    // B. Update Detected Water Extent (Current Observation)
     const waterSource = map.getSource('detected-water') as maplibregl.GeoJSONSource;
     if (waterSource) {
       if (currentObservation && currentObservation.water_extent_geometry) {
@@ -400,10 +584,10 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [selectedLake, currentObservation]);
 
-  // 5. Update Comparison Differences (Encroachment Overlay)
+  // 8. Update Comparison Differences
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
     const lostSource = map.getSource('comparison-lost') as maplibregl.GeoJSONSource;
@@ -444,10 +628,10 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [comparisonData]);
 
-  // 6. Update Restoration Simulation Extent
+  // 9. Update Restoration Simulation Extent
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
     const simSource = map.getSource('restoration-sim') as maplibregl.GeoJSONSource;
@@ -469,18 +653,12 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [restorationData, activeScreen]);
 
-  // 7. Layer visibility toggling
+  // 10. Layer visibility toggling
   useEffect(() => {
-    if (!mapRef.current) return;
-    const map = mapRef.current;
+    if (!mapMainRef.current) return;
+    const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
-    if (map.getLayer('satellite-layer')) {
-      map.setLayoutProperty('satellite-layer', 'visibility', layers.satellite ? 'visible' : 'none');
-    }
-    if (map.getLayer('labels-layer')) {
-      map.setLayoutProperty('labels-layer', 'visibility', layers.labels ? 'visible' : 'none');
-    }
     if (map.getLayer('selected-cadastre-line')) {
       map.setLayoutProperty('selected-cadastre-line', 'visibility', layers.cadastralBoundary ? 'visible' : 'none');
     }
@@ -497,9 +675,132 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [layers]);
 
+  // Swipe Drag Handlers
+  const handleMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const width = window.innerWidth;
+    const pct = Math.max(5, Math.min(95, (clientX / width) * 100));
+    setSwipePosition(pct);
+  }, [isDragging, setSwipePosition]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleMouseMove);
+      window.addEventListener('touchend', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="relative w-full h-full overflow-hidden select-none">
+      {/* Layer 1: Swipe Baseline Map (2017 Satellite) - Only active in Swipe Mode */}
+      {isSwipeMode && (
+        <div
+          ref={swipeContainerRef}
+          className="absolute inset-0 w-full h-full z-0"
+        />
+      )}
+
+      {/* Layer 2: Main Map (Current Satellite + Encroachment Mask) */}
+      <div
+        ref={mapContainerRef}
+        className="absolute inset-0 w-full h-full z-10"
+        style={
+          isSwipeMode
+            ? { clipPath: `inset(0 0 0 ${swipePosition}%)` }
+            : undefined
+        }
+      />
+
+      {/* Draggable Divider Bar for Before/After Swipe Mode */}
+      {isSwipeMode && (
+        <>
+          <div
+            className="absolute top-0 bottom-0 z-30 w-1 bg-white shadow-2xl cursor-ew-resize flex items-center justify-center pointer-events-auto"
+            style={{ left: `${swipePosition}%` }}
+            onMouseDown={() => setIsDragging(true)}
+            onTouchStart={() => setIsDragging(true)}
+          >
+            {/* Handle Button */}
+            <div className="w-10 h-10 -ml-0.5 rounded-full bg-[#101A20] border-2 border-[#47D4DF] text-white shadow-2xl flex items-center justify-center text-xs font-mono font-bold hover:scale-110 active:scale-95 transition-transform">
+              ↔
+            </div>
+          </div>
+
+          {/* Floating Screen Badges in Swipe Mode */}
+          <div className="absolute top-16 left-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#47D4DF]/40 text-white rounded-lg px-3 py-1.5 text-xs shadow-xl flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#168CC5]" />
+            <span className="font-bold text-[#47D4DF]">2017 Baseline Satellite</span>
+            <span className="text-[10px] text-[#8D9A9A]">(Pristine Water Extent)</span>
+          </div>
+
+          <div className="absolute top-16 right-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#EF4444]/40 text-white rounded-lg px-3 py-1.5 text-xs shadow-xl flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse" />
+            <span className="font-bold text-[#F87171]">2024 Current Satellite</span>
+            <span className="text-[10px] text-[#8D9A9A]">(Urban Encroachments)</span>
+          </div>
+        </>
+      )}
+
+      {/* Satellite Visual Difference Control Toolbar (Top Center) */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-2 shadow-2xl flex items-center space-x-4 text-xs text-white">
+        {/* Swipe Mode Toggle Button */}
+        <button
+          onClick={() => setIsSwipeMode(!isSwipeMode)}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl font-medium transition-all ${
+            isSwipeMode
+              ? 'bg-[#47D4DF] text-[#101A20] shadow-water-glow font-bold'
+              : 'bg-white/10 text-white hover:bg-white/15'
+          }`}
+          title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2024 satellite photos"
+        >
+          <SplitSquareVertical className="w-3.5 h-3.5" />
+          <span>{isSwipeMode ? 'Exit Swipe View' : '🛰️ Satellite Swipe (2017 vs 2024)'}</span>
+        </button>
+
+        <span className="text-white/20">|</span>
+
+        {/* Satellite Imagery Year Indicator */}
+        <div className="flex items-center space-x-2 text-[11px]">
+          <Calendar className="w-3.5 h-3.5 text-[#47D4DF]" />
+          <span className="text-[#8D9A9A]">Orbit Image:</span>
+          <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">
+            {isSwipeMode ? '2017 ◀ ▶ 2024' : `${currentYear} Sentinel-2`}
+          </span>
+        </div>
+
+        <span className="text-white/20">|</span>
+
+        {/* Encroachment Mask Opacity Slider */}
+        <div className="flex items-center space-x-2 text-[11px]">
+          <span className="text-[#8D9A9A]">Red Mask Opacity:</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={maskOpacity}
+            onChange={(e) => setMaskOpacity(parseFloat(e.target.value))}
+            className="w-20 accent-[#EF4444] cursor-pointer"
+            title="Adjust opacity to see houses and roads beneath the red encroachment overlay"
+          />
+          <span className="font-mono text-[#F87171] w-7 text-right">
+            {Math.round(maskOpacity * 100)}%
+          </span>
+        </div>
+      </div>
 
       {/* City-Wide Civic Encroachment Audit HUD (Top Right) */}
       <div className="absolute top-4 right-16 z-10 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-xl px-3.5 py-2 shadow-2xl flex items-center space-x-3 text-xs">
