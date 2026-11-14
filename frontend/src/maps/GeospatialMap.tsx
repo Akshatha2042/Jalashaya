@@ -739,14 +739,14 @@ export const GeospatialMap: React.FC = () => {
             </div>
           </div>
 
-          {/* Floating Screen Badges in Swipe Mode */}
-          <div className="absolute top-16 left-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#47D4DF]/40 text-white rounded-lg px-3 py-1.5 text-xs shadow-xl flex items-center space-x-2">
+          {/* Floating Screen Badges in Swipe Mode (Positioned above timeline, avoiding top controls) */}
+          <div className="absolute bottom-28 left-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#47D4DF]/50 text-white rounded-xl px-3 py-1.5 text-xs shadow-2xl flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#168CC5]" />
             <span className="font-bold text-[#47D4DF]">2017 Baseline Satellite</span>
             <span className="text-[10px] text-[#8D9A9A]">(Pristine Water Extent)</span>
           </div>
 
-          <div className="absolute top-16 right-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#EF4444]/40 text-white rounded-lg px-3 py-1.5 text-xs shadow-xl flex items-center space-x-2">
+          <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#EF4444]/50 text-white rounded-xl px-3 py-1.5 text-xs shadow-2xl flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse" />
             <span className="font-bold text-[#F87171]">2024 Current Satellite</span>
             <span className="text-[10px] text-[#8D9A9A]">(Urban Encroachments)</span>
@@ -754,12 +754,12 @@ export const GeospatialMap: React.FC = () => {
         </>
       )}
 
-      {/* Satellite Visual Difference Control Toolbar (Top Center) */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-2 shadow-2xl flex items-center space-x-4 text-xs text-white">
+      {/* Satellite Visual Difference Control Toolbar (Floating Below Header, Center) */}
+      <div className="absolute top-[62px] left-1/2 -translate-x-1/2 z-30 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-1.5 shadow-2xl flex items-center space-x-3 text-xs text-white">
         {/* Swipe Mode Toggle Button */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl font-medium transition-all ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-medium transition-all ${
             isSwipeMode
               ? 'bg-[#47D4DF] text-[#101A20] shadow-water-glow font-bold'
               : 'bg-white/10 text-white hover:bg-white/15'
@@ -767,16 +767,16 @@ export const GeospatialMap: React.FC = () => {
           title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2024 satellite photos"
         >
           <SplitSquareVertical className="w-3.5 h-3.5" />
-          <span>{isSwipeMode ? 'Exit Swipe View' : '🛰️ Satellite Swipe (2017 vs 2024)'}</span>
+          <span>{isSwipeMode ? 'Exit Swipe' : '🛰️ Satellite Swipe (2017 vs 2024)'}</span>
         </button>
 
         <span className="text-white/20">|</span>
 
         {/* Satellite Imagery Year Indicator */}
-        <div className="flex items-center space-x-2 text-[11px]">
-          <Calendar className="w-3.5 h-3.5 text-[#47D4DF]" />
-          <span className="text-[#8D9A9A]">Orbit Image:</span>
-          <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded">
+        <div className="flex items-center space-x-1.5 text-[11px]">
+          <Calendar className="w-3 h-3 text-[#47D4DF]" />
+          <span className="text-[#8D9A9A] hidden sm:inline">Orbit:</span>
+          <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.5 rounded text-[10px]">
             {isSwipeMode ? '2017 ◀ ▶ 2024' : `${currentYear} Sentinel-2`}
           </span>
         </div>
@@ -784,8 +784,8 @@ export const GeospatialMap: React.FC = () => {
         <span className="text-white/20">|</span>
 
         {/* Encroachment Mask Opacity Slider */}
-        <div className="flex items-center space-x-2 text-[11px]">
-          <span className="text-[#8D9A9A]">Red Mask Opacity:</span>
+        <div className="flex items-center space-x-1.5 text-[11px]">
+          <span className="text-[#8D9A9A] hidden sm:inline">Mask:</span>
           <input
             type="range"
             min="0"
@@ -793,28 +793,13 @@ export const GeospatialMap: React.FC = () => {
             step="0.05"
             value={maskOpacity}
             onChange={(e) => setMaskOpacity(parseFloat(e.target.value))}
-            className="w-20 accent-[#EF4444] cursor-pointer"
+            className="w-16 accent-[#EF4444] cursor-pointer h-1.5"
             title="Adjust opacity to see houses and roads beneath the red encroachment overlay"
           />
-          <span className="font-mono text-[#F87171] w-7 text-right">
+          <span className="font-mono text-[#F87171] w-6 text-right text-[10px]">
             {Math.round(maskOpacity * 100)}%
           </span>
         </div>
-      </div>
-
-      {/* City-Wide Civic Encroachment Audit HUD (Top Right) */}
-      <div className="absolute top-4 right-16 z-10 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-xl px-3.5 py-2 shadow-2xl flex items-center space-x-3 text-xs">
-        <div className="flex items-center space-x-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse" />
-          <span className="font-semibold text-white">136 Encroached</span>
-        </div>
-        <span className="text-white/20">|</span>
-        <div className="flex items-center space-x-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]" />
-          <span className="font-semibold text-white">49 Intrusion-Free</span>
-        </div>
-        <span className="text-white/20">|</span>
-        <span className="font-mono text-[#8D9A9A] text-[11px]">185 BBMP Lakes</span>
       </div>
     </div>
   );

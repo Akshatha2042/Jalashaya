@@ -41,7 +41,7 @@ export const LakeTelemetryCard: React.FC = () => {
   const isEncroached = (selectedLake.encroachment_status || '').toLowerCase().includes('encroached');
 
   return (
-    <aside className="absolute top-20 right-4 z-20 pointer-events-auto">
+    <aside className="absolute top-[62px] right-4 z-30 pointer-events-auto">
       {/* 1. Minimized Pill */}
       {!isTelemetryOpen ? (
         <button

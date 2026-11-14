@@ -53,7 +53,7 @@ export const LakeExplorerPanel: React.FC = () => {
   const selectedLakeObj = lakes.find((l) => l.id === selectedLakeId);
 
   return (
-    <aside className="absolute top-20 left-4 z-20 pointer-events-auto">
+    <aside className="absolute top-[62px] left-4 z-30 pointer-events-auto">
       {/* 1. Collapsed Floating Search Pill */}
       {!isExplorerOpen ? (
         <button
