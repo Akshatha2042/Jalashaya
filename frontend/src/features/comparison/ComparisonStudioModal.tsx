@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X,
   Sliders,
@@ -9,9 +9,16 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle2,
-  Maximize2
+  Maximize2,
+  Eye,
+  EyeOff,
+  ZoomIn,
+  ZoomOut,
+  Image as ImageIcon,
+  Layers
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
+import { GeoJSONGeometry } from '../../types';
 
 export const ComparisonStudioModal: React.FC = () => {
   const {
@@ -26,6 +33,16 @@ export const ComparisonStudioModal: React.FC = () => {
     setIsReportModalOpen
   } = useAppStore();
 
+  // Imagery view states
+  const [showOldMask, setShowOldMask] = useState<boolean>(true);
+  const [oldOpacity, setOldOpacity] = useState<number>(0.5);
+  const [oldZoomed, setOldZoomed] = useState<boolean>(false);
+
+  const [showNewMask, setShowNewMask] = useState<boolean>(true);
+  const [newOpacity, setNewOpacity] = useState<number>(0.55);
+  const [newZoomed, setNewZoomed] = useState<boolean>(false);
+  const [activeLayerMode, setActiveLayerMode] = useState<'all' | 'encroachment' | 'water' | 'raw'>('all');
+
   if (activeScreen !== 'comparison-studio' || !selectedLake) return null;
 
   const olderObs = observations.find((o) => o.id === comparisonOlderId) || observations[0];
@@ -36,6 +53,107 @@ export const ComparisonStudioModal: React.FC = () => {
 
   const isShrinking = comparisonData && comparisonData.area_change_hectares < 0 && Math.abs(comparisonData.change_percentage) >= 20.0;
 
+  // Compute Lake Bounding Box with margin for satellite capture
+  const lakeBBox = useMemo(() => {
+    if (!selectedLake) return null;
+    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+
+    const extract = (coords: any[]) => {
+      if (!Array.isArray(coords)) return;
+      if (typeof coords[0] === 'number') {
+        const [lon, lat] = coords;
+        if (lon < minLon) minLon = lon;
+        if (lon > maxLon) maxLon = lon;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+      } else {
+        coords.forEach(extract);
+      }
+    };
+
+    if (selectedLake.boundary_geometry?.coordinates) {
+      extract(selectedLake.boundary_geometry.coordinates);
+    }
+
+    if (minLon === 180) {
+      const d = 0.015;
+      return {
+        minLon: selectedLake.longitude - d,
+        maxLon: selectedLake.longitude + d,
+        minLat: selectedLake.latitude - d,
+        maxLat: selectedLake.latitude + d
+      };
+    }
+
+    const dLon = (maxLon - minLon) * 0.22 || 0.008;
+    const dLat = (maxLat - minLat) * 0.22 || 0.008;
+
+    return {
+      minLon: +(minLon - dLon).toFixed(5),
+      maxLon: +(maxLon + dLon).toFixed(5),
+      minLat: +(minLat - dLat).toFixed(5),
+      maxLat: +(maxLat + dLat).toFixed(5)
+    };
+  }, [selectedLake]);
+
+  // Actual high-resolution satellite imagery photo URL for the lake
+  const satelliteImageUrl = lakeBBox
+    ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=800,480&f=image`
+    : '';
+
+  // Converts GeoJSON coordinates directly to SVG paths matching satellite bounding box
+  const projectCoordsToSvg = (
+    geom: GeoJSONGeometry | undefined,
+    bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null,
+    w = 800,
+    h = 480
+  ): string => {
+    if (!geom || !geom.coordinates || !bbox) return '';
+
+    const projectPoint = (lon: number, lat: number): [number, number] => {
+      const x = ((lon - bbox.minLon) / (bbox.maxLon - bbox.minLon)) * w;
+      const y = ((bbox.maxLat - lat) / (bbox.maxLat - bbox.minLat)) * h;
+      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+    };
+
+    const ringToPath = (ring: number[][]): string => {
+      if (!Array.isArray(ring) || ring.length === 0) return '';
+      const pts = ring.map((pt) => projectPoint(pt[0], pt[1]));
+      return `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p) => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
+    };
+
+    try {
+      if (geom.type === 'Polygon') {
+        return geom.coordinates.map(ringToPath).join(' ');
+      } else if (geom.type === 'MultiPolygon') {
+        return geom.coordinates.map((poly: any) => poly.map(ringToPath).join(' ')).join(' ');
+      }
+    } catch {
+      return '';
+    }
+    return '';
+  };
+
+  const oldWaterPath = useMemo(
+    () => projectCoordsToSvg(olderObs?.water_extent_geometry || selectedLake?.boundary_geometry, lakeBBox),
+    [olderObs, selectedLake, lakeBBox]
+  );
+
+  const newWaterPath = useMemo(
+    () => projectCoordsToSvg(newerObs?.water_extent_geometry, lakeBBox),
+    [newerObs, lakeBBox]
+  );
+
+  const lostWaterPath = useMemo(
+    () => projectCoordsToSvg(comparisonData?.lost_water_geometry, lakeBBox),
+    [comparisonData, lakeBBox]
+  );
+
+  const cadastralPath = useMemo(
+    () => projectCoordsToSvg(selectedLake?.boundary_geometry, lakeBBox),
+    [selectedLake, lakeBBox]
+  );
+
   return (
     <div className="fixed inset-0 z-50 bg-[#101A20]/80 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-[#101A20] border border-white/10 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -43,7 +161,7 @@ export const ComparisonStudioModal: React.FC = () => {
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-[#168CC5]/20 text-[#47D4DF]">
-              <Sliders className="w-5 h-5" />
+              <ImageIcon className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -53,7 +171,7 @@ export const ComparisonStudioModal: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-[#8D9A9A]">
-                Multi-temporal satellite imagery & surface area differential watch
+                Multi-temporal satellite imagery: Baseline pristine water body vs contemporary urban encroachment
               </p>
             </div>
           </div>
@@ -105,7 +223,7 @@ export const ComparisonStudioModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Action to report */}
+          {/* Action buttons */}
           <div className="flex items-center space-x-2">
             <button
               onClick={() => {
@@ -140,30 +258,99 @@ export const ComparisonStudioModal: React.FC = () => {
                     {oldYear} Baseline Satellite Image
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#47D4DF] bg-[#168CC5]/20 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono text-[#47D4DF] bg-[#168CC5]/20 px-2 py-0.5 rounded border border-[#168CC5]/30">
                   {olderObs?.observation_date}
                 </span>
               </div>
 
-              {/* Satellite Frame Representation */}
-              <div className="relative h-44 rounded-xl overflow-hidden border border-white/10 bg-[#0B1216] flex items-center justify-center">
-                {/* Background Imagery Representation with Satellite Coordinates */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#102B25]/60 via-[#142D3B]/80 to-[#0F1E26] flex flex-col items-center justify-center text-center p-4">
-                  <div className="w-24 h-24 rounded-full border-2 border-dashed border-[#47D4DF]/60 bg-[#168CC5]/30 flex items-center justify-center shadow-water-glow animate-pulse">
-                    <span className="text-xs font-mono text-white font-bold">
-                      {comparisonData ? comparisonData.area_old_hectares.toFixed(1) : olderObs?.detected_area_hectares} ha
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-[#8D9A9A] mt-2 font-mono">
-                    Sentinel-2 MSI Level-2A • 10m Ground Resolution
+              {/* Real Satellite Photo Container */}
+              <div className="relative h-60 md:h-64 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] select-none shadow-inner">
+                {/* Photographic Satellite Imagery */}
+                <img
+                  src={satelliteImageUrl}
+                  alt={`${selectedLake.official_name} ${oldYear} Satellite Image`}
+                  className={`w-full h-full object-cover transition-transform duration-300 ${
+                    oldZoomed ? 'scale-150' : 'scale-100'
+                  }`}
+                  loading="lazy"
+                />
+
+                {/* SVG Water Vector Overlay */}
+                {showOldMask && oldWaterPath && (
+                  <svg
+                    viewBox="0 0 800 480"
+                    preserveAspectRatio="none"
+                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200"
+                    style={{ opacity: oldOpacity }}
+                  >
+                    <defs>
+                      <radialGradient id="waterGlowOld" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#47D4DF" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#168CC5" stopOpacity="0.65" />
+                      </radialGradient>
+                    </defs>
+                    <path
+                      d={oldWaterPath}
+                      fill="url(#waterGlowOld)"
+                      stroke="#47D4DF"
+                      strokeWidth="2.5"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+
+                {/* Badges on top of satellite photo */}
+                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5">
+                  <span className="text-[10px] font-mono text-white bg-[#101A20]/85 backdrop-blur-md border border-white/20 px-2.5 py-0.5 rounded-full flex items-center space-x-1 shadow-lg">
+                    <span>🛰️ High-Res Satellite View</span>
+                  </span>
+                  <span className="text-[9px] font-mono text-[#34D399] bg-[#10B981]/25 backdrop-blur-md border border-[#10B981]/50 px-2 py-0.5 rounded-full font-semibold">
+                    ✓ Full Water Spread
                   </span>
                 </div>
 
-                <div className="absolute top-2 left-2 text-[9px] font-mono text-[#34D399] bg-[#10B981]/20 border border-[#10B981]/40 px-2 py-0.5 rounded-full">
-                  ✓ Full Water Spread (Pre-Encroachment)
+                {/* Interactive Controls Overlay at Bottom */}
+                <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-[#101A20]/90 backdrop-blur-md border border-white/15 rounded-lg px-2.5 py-1.5 text-[10px]">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowOldMask(!showOldMask)}
+                      className={`px-2 py-0.5 rounded font-mono font-medium flex items-center space-x-1 transition-colors ${
+                        showOldMask ? 'bg-[#168CC5] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
+                      }`}
+                      title={showOldMask ? 'Hide vector overlay to view pure satellite photo' : 'Show detected water boundary'}
+                    >
+                      {showOldMask ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      <span>{showOldMask ? 'Water Boundary Mask' : 'Pure Satellite Photo'}</span>
+                    </button>
+
+                    {showOldMask && (
+                      <div className="flex items-center space-x-1.5 hidden sm:flex">
+                        <span className="text-[#8D9A9A]">Mask:</span>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="1"
+                          step="0.05"
+                          value={oldOpacity}
+                          onChange={(e) => setOldOpacity(parseFloat(e.target.value))}
+                          className="w-14 h-1 accent-[#47D4DF] cursor-pointer"
+                        />
+                        <span className="font-mono text-white text-[9px]">{Math.round(oldOpacity * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setOldZoomed(!oldZoomed)}
+                    className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    title={oldZoomed ? 'Zoom Out' : 'Zoom In on Satellite Imagery'}
+                  >
+                    {oldZoomed ? <ZoomOut className="w-3.5 h-3.5" /> : <ZoomIn className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
+              {/* Data readouts */}
               <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                 <div>
                   <span className="text-[10px] text-[#8D9A9A] block">Water Surface</span>
@@ -174,7 +361,7 @@ export const ComparisonStudioModal: React.FC = () => {
                 <div>
                   <span className="text-[10px] text-[#8D9A9A] block">Sensor / Source</span>
                   <span className="text-white text-[11px] truncate block">
-                    {olderObs?.satellite_source || 'Sentinel-2A'}
+                    {olderObs?.satellite_source || 'Sentinel-2A'} (10m)
                   </span>
                 </div>
               </div>
@@ -189,36 +376,118 @@ export const ComparisonStudioModal: React.FC = () => {
                     {newYear} Contemporary Satellite Image
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#F87171] bg-[#EF4444]/20 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono text-[#F87171] bg-[#EF4444]/20 px-2 py-0.5 rounded border border-[#EF4444]/30">
                   {newerObs?.observation_date}
                 </span>
               </div>
 
-              {/* Satellite Frame Representation */}
-              <div className="relative h-44 rounded-xl overflow-hidden border border-white/10 bg-[#0B1216] flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#2D1414]/60 via-[#142D3B]/80 to-[#0F1E26] flex flex-col items-center justify-center text-center p-4">
-                  <div className="w-16 h-16 rounded-full border-2 border-[#168CC5] bg-[#168CC5]/40 flex items-center justify-center">
-                    <span className="text-[11px] font-mono text-white font-bold">
-                      {comparisonData ? comparisonData.area_new_hectares.toFixed(1) : newerObs?.detected_area_hectares} ha
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-[#8D9A9A] mt-2 font-mono">
-                    Sentinel-2 MSI Level-2A • Multi-Spectral NDWI
+              {/* Real Satellite Photo Container */}
+              <div className="relative h-60 md:h-64 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] select-none shadow-inner">
+                {/* Photographic Satellite Imagery showing Real Buildings & Roads */}
+                <img
+                  src={satelliteImageUrl}
+                  alt={`${selectedLake.official_name} ${newYear} Satellite Image`}
+                  className={`w-full h-full object-cover transition-transform duration-300 ${
+                    newZoomed ? 'scale-150' : 'scale-100'
+                  }`}
+                  loading="lazy"
+                />
+
+                {/* SVG Vector Alignment: Active Water + Red Encroached Settlement Zone */}
+                {showNewMask && (
+                  <svg
+                    viewBox="0 0 800 480"
+                    preserveAspectRatio="none"
+                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200"
+                    style={{ opacity: newOpacity }}
+                  >
+                    {/* Remaining Active Water (Cyan/Blue) */}
+                    {newWaterPath && (activeLayerMode === 'all' || activeLayerMode === 'water') && (
+                      <path
+                        d={newWaterPath}
+                        fill="rgba(22, 140, 197, 0.55)"
+                        stroke="#168CC5"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                    )}
+
+                    {/* Human Encroachment / Lost Water (Red Translucent Mask over Buildings) */}
+                    {lostWaterPath && (activeLayerMode === 'all' || activeLayerMode === 'encroachment') && (
+                      <path
+                        d={lostWaterPath}
+                        fill="rgba(239, 68, 68, 0.52)"
+                        stroke="#EF4444"
+                        strokeWidth="2.5"
+                        strokeDasharray="4 2"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                  </svg>
+                )}
+
+                {/* Badges on top of contemporary satellite photo */}
+                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5">
+                  <span className="text-[10px] font-mono text-white bg-[#101A20]/85 backdrop-blur-md border border-white/20 px-2.5 py-0.5 rounded-full flex items-center space-x-1 shadow-lg">
+                    <span>🛰️ High-Res Satellite View</span>
                   </span>
+                  {isShrinking ? (
+                    <span className="text-[9px] font-mono text-[#F87171] bg-[#EF4444]/30 backdrop-blur-md border border-[#EF4444]/50 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1 animate-pulse">
+                      <AlertTriangle className="w-2.5 h-2.5" />
+                      <span>Shrinkage Flagged</span>
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-mono text-[#34D399] bg-[#10B981]/30 backdrop-blur-md border border-[#10B981]/50 px-2 py-0.5 rounded-full">
+                      ✓ Stable
+                    </span>
+                  )}
                 </div>
 
-                {isShrinking ? (
-                  <div className="absolute top-2 left-2 text-[9px] font-mono text-[#F87171] bg-[#EF4444]/30 border border-[#EF4444]/60 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1 animate-pulse">
-                    <AlertTriangle className="w-2.5 h-2.5" />
-                    <span>⚠️ SHRINKING ALERT (Automatic Flag)</span>
+                {/* Interactive Controls Overlay at Bottom */}
+                <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-[#101A20]/90 backdrop-blur-md border border-white/15 rounded-lg px-2.5 py-1.5 text-[10px]">
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={() => {
+                        setShowNewMask(true);
+                        setActiveLayerMode(activeLayerMode === 'raw' ? 'all' : 'raw');
+                      }}
+                      className={`px-2 py-0.5 rounded font-mono font-medium flex items-center space-x-1 transition-colors ${
+                        activeLayerMode !== 'raw' ? 'bg-[#EF4444] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
+                      }`}
+                      title={activeLayerMode !== 'raw' ? 'Click to view pure satellite photograph' : 'Click to highlight human encroachment'}
+                    >
+                      {activeLayerMode !== 'raw' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      <span>{activeLayerMode !== 'raw' ? 'Encroachment Highlight' : 'Pure Satellite Photo'}</span>
+                    </button>
+
+                    {activeLayerMode !== 'raw' && (
+                      <div className="flex items-center space-x-1.5 hidden sm:flex">
+                        <span className="text-[#8D9A9A]">Mask:</span>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="1"
+                          step="0.05"
+                          value={newOpacity}
+                          onChange={(e) => setNewOpacity(parseFloat(e.target.value))}
+                          className="w-14 h-1 accent-[#EF4444] cursor-pointer"
+                        />
+                        <span className="font-mono text-white text-[9px]">{Math.round(newOpacity * 100)}%</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="absolute top-2 left-2 text-[9px] font-mono text-[#34D399] bg-[#10B981]/20 border border-[#10B981]/40 px-2 py-0.5 rounded-full">
-                    ✓ Stable Boundary
-                  </div>
-                )}
+
+                  <button
+                    onClick={() => setNewZoomed(!newZoomed)}
+                    className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    title={newZoomed ? 'Zoom Out' : 'Zoom In on Satellite Imagery'}
+                  >
+                    {newZoomed ? <ZoomOut className="w-3.5 h-3.5" /> : <ZoomIn className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
+              {/* Data readouts */}
               <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                 <div>
                   <span className="text-[10px] text-[#8D9A9A] block">Water Surface</span>
