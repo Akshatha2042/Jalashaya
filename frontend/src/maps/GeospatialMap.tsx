@@ -24,8 +24,18 @@ const SATELLITE_YEAR_TILES: Record<string, string> = {
   '2026': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}'
 };
 
-const GOOGLE_SATELLITE_URL = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
-const ESRI_SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+// Multi-host parallel tile URLs for fastest concurrent downloads
+const GOOGLE_SATELLITE_TILES = [
+  'https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+  'https://mt1.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+  'https://mt2.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+  'https://mt3.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}'
+];
+
+const ESRI_SATELLITE_TILES = [
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+];
 const ESRI_LABELS_URL = 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
 export const GeospatialMap: React.FC = () => {
@@ -68,18 +78,21 @@ export const GeospatialMap: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
+      fadeDuration: 0,
+      maxTileCacheSize: 200,
+      renderWorldCopies: false,
       style: {
         version: 8,
         sources: {
           'google-satellite': {
             type: 'raster',
-            tiles: [GOOGLE_SATELLITE_URL],
+            tiles: GOOGLE_SATELLITE_TILES,
             tileSize: 256,
             attribution: '© Google Maps'
           },
           'esri-satellite': {
             type: 'raster',
-            tiles: [ESRI_SATELLITE_URL],
+            tiles: ESRI_SATELLITE_TILES,
             tileSize: 256,
             attribution: '© Esri, Maxar'
           },
@@ -127,7 +140,12 @@ export const GeospatialMap: React.FC = () => {
             source: 'google-satellite',
             minzoom: 0,
             maxzoom: 22,
-            layout: { visibility: 'visible' }
+            layout: { visibility: 'visible' },
+            paint: {
+              'raster-resampling': 'linear',
+              'raster-contrast': 0.08,
+              'raster-saturation': 0.12
+            }
           },
           // Base Satellite Layer: Contemporary High-Res Esri
           {
@@ -136,7 +154,12 @@ export const GeospatialMap: React.FC = () => {
             source: 'esri-satellite',
             minzoom: 0,
             maxzoom: 20,
-            layout: { visibility: 'none' }
+            layout: { visibility: 'none' },
+            paint: {
+              'raster-resampling': 'linear',
+              'raster-contrast': 0.12,
+              'raster-saturation': 0.15
+            }
           },
           // Multi-Temporal Sentinel-2 True-Color Layers
           {
@@ -238,7 +261,7 @@ export const GeospatialMap: React.FC = () => {
             '#EF4444',
             '#10B981'
           ],
-          'fill-opacity': 0.28
+          'fill-opacity': 0.35
         }
       });
 
@@ -250,22 +273,33 @@ export const GeospatialMap: React.FC = () => {
           'line-color': [
             'case',
             ['boolean', ['get', 'isEncroached'], false],
-            '#F87171',
-            '#34D399'
+            '#DC2626',
+            '#059669'
           ],
-          'line-width': 1.6,
-          'line-opacity': 0.85
+          'line-width': 2.4,
+          'line-opacity': 0.95
         }
       });
 
-      // Layer 2: Selected Lake Cadastral Basin Boundary
+      // Layer 2: Selected Lake Cadastral Basin Boundary with Contrast Halo
+      map.addLayer({
+        id: 'selected-cadastre-halo',
+        type: 'line',
+        source: 'selected-lake-cadastre',
+        paint: {
+          'line-color': '#0369A1',
+          'line-width': 5.5,
+          'line-opacity': 0.75
+        }
+      });
+
       map.addLayer({
         id: 'selected-cadastre-line',
         type: 'line',
         source: 'selected-lake-cadastre',
         paint: {
-          'line-color': '#47D4DF',
-          'line-width': 2.8,
+          'line-color': '#38BDF8',
+          'line-width': 3.0,
           'line-dasharray': [3, 2]
         }
       });
@@ -276,8 +310,8 @@ export const GeospatialMap: React.FC = () => {
         type: 'fill',
         source: 'detected-water',
         paint: {
-          'fill-color': '#168CC5',
-          'fill-opacity': 0.80
+          'fill-color': '#0284C7',
+          'fill-opacity': 0.85
         }
       });
 
@@ -286,8 +320,8 @@ export const GeospatialMap: React.FC = () => {
         type: 'line',
         source: 'detected-water',
         paint: {
-          'line-color': '#47D4DF',
-          'line-width': 2.0
+          'line-color': '#38BDF8',
+          'line-width': 2.8
         }
       });
 
@@ -303,12 +337,24 @@ export const GeospatialMap: React.FC = () => {
       });
 
       map.addLayer({
+        id: 'lost-water-halo',
+        type: 'line',
+        source: 'comparison-lost',
+        paint: {
+          'line-color': '#7F1D1D',
+          'line-width': 5.0,
+          'line-opacity': 0.6
+        }
+      });
+
+      map.addLayer({
         id: 'lost-water-line',
         type: 'line',
         source: 'comparison-lost',
         paint: {
-          'line-color': '#DC2626',
-          'line-width': 2.4
+          'line-color': '#EF4444',
+          'line-width': 3.0,
+          'line-opacity': 0.95
         }
       });
 
@@ -435,6 +481,9 @@ export const GeospatialMap: React.FC = () => {
 
     const mapBefore = new maplibregl.Map({
       container: swipeContainerRef.current,
+      fadeDuration: 0,
+      maxTileCacheSize: 150,
+      renderWorldCopies: false,
       style: {
         version: 8,
         sources: {

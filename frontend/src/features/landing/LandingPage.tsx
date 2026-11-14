@@ -394,6 +394,34 @@ export const LandingPage: React.FC = () => {
           <p>Data sources: OpenStreetMap, BBMP Lake Cadastre, Copernicus Sentinel-2 MSI, EC JRC.</p>
         </div>
       </footer>
+
+      {/* Floating Bottom Quick Jump Bar */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-2xl rounded-full px-4 py-2 flex items-center gap-3 text-xs font-medium text-slate-700 transition-all">
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 font-semibold"
+        >
+          <span>↑ Top</span>
+        </button>
+        <span className="text-slate-300">|</span>
+        <a href="#audit" onClick={scrollToSection('audit')} className="hover:text-sky-600 transition-colors">
+          Audit
+        </a>
+        <a href="#features" onClick={scrollToSection('features')} className="hover:text-sky-600 transition-colors">
+          Features
+        </a>
+        <a href="#flagship" onClick={scrollToSection('flagship')} className="hover:text-sky-600 transition-colors">
+          Flagship
+        </a>
+        <span className="text-slate-300">|</span>
+        <button
+          onClick={() => handleLaunchMap()}
+          className="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 transition-all transform hover:scale-105 active:scale-95"
+        >
+          <span>Launch 3D Map</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 };
