@@ -83,9 +83,37 @@ interface AppStoreState {
   resetCameraToBengaluru: () => void;
 }
 
+const getInitialScreen = (): AppScreen => {
+  if (typeof window === 'undefined') return 'landing';
+  const hash = window.location.hash.toLowerCase();
+  if (hash === '#map' || hash === '#digital-twin') return 'command-center';
+  if (hash === '#comparison') return 'comparison-studio';
+  if (hash === '#simulation' || hash === '#simulation-lab' || hash === '#restoration') return 'restoration-lab';
+  if (hash === '#methodology') return 'methodology';
+  return 'landing';
+};
+
 export const useAppStore = create<AppStoreState>((set, get) => ({
-  activeScreen: 'command-center',
-  setActiveScreen: (screen) => set({ activeScreen: screen }),
+  activeScreen: getInitialScreen(),
+  setActiveScreen: (screen) => {
+    set({ activeScreen: screen });
+    if (typeof window !== 'undefined') {
+      const hashMap: Record<AppScreen, string> = {
+        'landing': '#home',
+        'command-center': '#map',
+        'lake-explorer': '#explorer',
+        'comparison-studio': '#comparison',
+        'restoration-lab': '#simulation-lab',
+        'methodology': '#methodology',
+        'about': '#about'
+      };
+      const landingSections = ['#audit', '#features', '#flagship', '#simulation', '#tech'];
+      const isCurrentLandingSection = landingSections.some((sec) => window.location.hash.startsWith(sec));
+      if (window.location.hash !== hashMap[screen] && !isCurrentLandingSection) {
+        window.history.replaceState(null, '', hashMap[screen] || '#home');
+      }
+    }
+  },
 
   lakes: [],
   selectedLakeId: null,

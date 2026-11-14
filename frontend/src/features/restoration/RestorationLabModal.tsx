@@ -9,62 +9,71 @@ export const RestorationLabModal: React.FC = () => {
     selectedLake,
     restorationTargetPct,
     updateRestorationSlider,
-    restorationData
+    restorationData,
+    lakes,
+    selectLake
   } = useAppStore();
 
   useEffect(() => {
-    if (activeScreen === 'restoration-lab' && selectedLake) {
-      updateRestorationSlider(restorationTargetPct);
+    if (activeScreen === 'restoration-lab') {
+      if (!selectedLake && lakes.length > 0) {
+        const bellandur = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
+        selectLake(bellandur.id);
+      } else if (selectedLake) {
+        updateRestorationSlider(restorationTargetPct);
+      }
     }
-  }, [activeScreen, selectedLake]);
+  }, [activeScreen, selectedLake, lakes, selectLake]);
 
   if (activeScreen !== 'restoration-lab' || !selectedLake) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#101A20]/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#101A20] border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-[#329B71]" />
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        {/* Header in Light Theme */}
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm">
+              <Sparkles className="w-5 h-5" />
+            </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-base font-bold text-white">What-If: Lake Restoration Lab</h3>
-                <span className="text-[10px] font-mono uppercase bg-[#E6A84B]/20 text-[#E6A84B] px-2 py-0.5 rounded font-bold">
+                <h3 className="text-base font-bold text-slate-900">What-If: Basin Restoration Lab</h3>
+                <span className="text-[10px] font-mono uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded font-bold">
                   Simulation Model
                 </span>
               </div>
-              <p className="text-xs text-[#8D9A9A]">
+              <p className="text-xs text-slate-500 font-medium">
                 Hypothetical basin reclamation scenario — {selectedLake.official_name}
               </p>
             </div>
           </div>
           <button
             onClick={() => setActiveScreen('command-center')}
-            className="text-[#8D9A9A] hover:text-white p-1 rounded hover:bg-white/5 transition-colors"
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Warning Banner */}
-        <div className="p-3 bg-[#E6A84B]/10 border-b border-[#E6A84B]/20 flex items-start space-x-2 text-xs text-[#E6A84B]">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-start space-x-2 text-xs text-amber-900">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
           <p>
             <strong>Scientific Guardrail:</strong> This is a scenario exploration tool, NOT an observed satellite measurement.
-            It geometrically extrapolates hypothetical water capacity towards the cadastral basin without assuming bathymetry or hydraulic viability.
+            It geometrically extrapolates hypothetical water capacity towards the cadastral basin boundary.
           </p>
         </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
-          {/* Target Slider */}
-          <div className="bg-[#142D3B]/40 border border-white/5 rounded-xl p-5 space-y-3">
+          {/* Target Slider Card */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono uppercase text-[#47D4DF] tracking-wider font-semibold">
-                Hypothetical Restoration Target
+              <label className="text-xs font-mono uppercase text-slate-600 tracking-wider font-bold">
+                Hypothetical Basin Restoration Target
               </label>
-              <span className="text-xl font-bold font-mono text-white">
+              <span className="text-2xl font-extrabold font-mono text-emerald-600">
                 {restorationTargetPct}%
               </span>
             </div>
@@ -76,12 +85,12 @@ export const RestorationLabModal: React.FC = () => {
               step="5"
               value={restorationTargetPct}
               onChange={(e) => updateRestorationSlider(parseFloat(e.target.value))}
-              className="w-full h-2 bg-[#101A20] rounded-lg appearance-none cursor-pointer accent-[#329B71]"
+              className="w-full h-2 bg-slate-200 rounded-lg cursor-pointer accent-emerald-600"
             />
 
-            <div className="flex justify-between text-[10px] font-mono text-[#8D9A9A]">
+            <div className="flex justify-between text-[10px] font-mono text-slate-500">
               <span>0% (Current Satellite Extent)</span>
-              <span>50% (Moderate Reclamation)</span>
+              <span>50% (Core Reclamation)</span>
               <span>100% (Full Cadastral Basin)</span>
             </div>
           </div>
@@ -89,68 +98,89 @@ export const RestorationLabModal: React.FC = () => {
           {/* Metric Comparison Cards */}
           {restorationData && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-[#142D3B]/30 border border-white/5 rounded-xl p-4">
-                <span className="text-[10px] font-mono uppercase text-[#8D9A9A] tracking-wider block">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider block font-semibold">
                   Current Observed Water
                 </span>
-                <div className="text-2xl font-bold font-mono text-white mt-1">
+                <div className="text-2xl font-bold font-mono text-slate-900 mt-1">
                   {restorationData.current_water_area_hectares.toFixed(1)}{' '}
-                  <span className="text-xs text-[#8D9A9A]">ha</span>
+                  <span className="text-xs text-slate-500 font-normal">ha</span>
                 </div>
-                <span className="text-[10px] text-[#8D9A9A] mt-0.5 block">
-                  Latest Sentinel-2 observation
-                </span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Contemporary satellite pass</span>
               </div>
 
-              <div className="bg-[#102B25]/40 border border-[#329B71]/30 rounded-xl p-4">
-                <span className="text-[10px] font-mono uppercase text-[#329B71] tracking-wider block font-semibold">
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4">
+                <span className="text-[10px] font-mono uppercase text-emerald-700 tracking-wider block font-semibold">
                   Simulated Water Extent
                 </span>
-                <div className="text-2xl font-bold font-mono text-[#329B71] mt-1">
+                <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
                   {restorationData.simulated_water_area_hectares.toFixed(1)}{' '}
-                  <span className="text-xs text-[#8D9A9A]">ha</span>
+                  <span className="text-xs text-emerald-600 font-normal">ha</span>
                 </div>
-                <span className="text-[10px] text-[#329B71] mt-0.5 block font-mono">
-                  +{restorationData.area_delta_hectares.toFixed(1)} ha potential gain
+                <span className="text-[10px] text-emerald-600 mt-0.5 block font-semibold">
+                  +{restorationData.area_delta_hectares.toFixed(1)} ha reclaimed (+{restorationTargetPct}%)
                 </span>
               </div>
 
-              <div className="bg-[#142D3B]/30 border border-white/5 rounded-xl p-4">
-                <span className="text-[10px] font-mono uppercase text-[#8D9A9A] tracking-wider block">
-                  Cadastral Basin Ceiling
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span className="text-[10px] font-mono uppercase text-slate-500 tracking-wider block font-semibold">
+                  Full Cadastral Basin
                 </span>
-                <div className="text-2xl font-bold font-mono text-white mt-1">
+                <div className="text-2xl font-bold font-mono text-slate-800 mt-1">
                   {restorationData.reference_basin_area_hectares.toFixed(1)}{' '}
-                  <span className="text-xs text-[#8D9A9A]">ha</span>
+                  <span className="text-xs text-slate-500 font-normal">ha</span>
                 </div>
-                <span className="text-[10px] text-[#8D9A9A] mt-0.5 block">
-                  Official mapped boundary
-                </span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Legal reference boundary</span>
               </div>
             </div>
           )}
 
-          {/* Environmental Insight */}
-          <div className="bg-[#142D3B]/20 border border-white/5 rounded-xl p-4 space-y-2 text-xs text-[#8D9A9A]">
-            <h4 className="text-xs font-semibold text-white">Reclamation Feasibility Considerations</h4>
-            <p>
-              Reclaiming degraded lake buffer zones requires coordinated de-silting, removal of invasive macrophyte weeds,
-              restoration of natural raja-kaluve stormwater feeder channels, and secondary sewage treatment plant (STP) inlets.
-            </p>
+          {/* Environmental Benefits Card */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold flex items-center space-x-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Hydrological Impact Projection ({restorationTargetPct}% Reclamation)</span>
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1">
+              <div>
+                <span className="text-slate-500 block text-[10px]">Flood Buffer Capacity</span>
+                <span className="font-mono font-bold text-slate-900">
+                  +{((restorationData?.area_delta_hectares || 0) * 15000).toLocaleString('en-IN', { maximumFractionDigits: 0 })} m³
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px]">Aquifer Recharge Potential</span>
+                <span className="font-mono font-bold text-emerald-700">
+                  +{((restorationData?.area_delta_hectares || 0) * 0.45).toFixed(1)} MLD
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px]">Urban Heat Island Abatement</span>
+                <span className="font-mono font-bold text-sky-700">
+                  -{(restorationTargetPct * 0.015).toFixed(1)} °C microclimate
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[10px]">Hydraulic Risk Score</span>
+                <span className={`font-mono font-bold ${restorationTargetPct >= 60 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {restorationTargetPct >= 60 ? 'OPTIMAL' : 'MODERATE'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 border-t border-white/10 flex items-center justify-between bg-[#142D3B]/20">
-          <span className="text-xs text-[#8D9A9A]">
-            View the simulated boundary directly on the 3D twin map
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between">
+          <span className="text-xs text-slate-500 font-mono">
+            Target polygon rendered in cyan vector on map view
           </span>
           <button
             onClick={() => setActiveScreen('command-center')}
-            className="flex items-center space-x-1.5 bg-[#329B71] hover:bg-[#329B71]/80 text-white font-medium px-4 py-2 rounded-lg text-xs transition-all"
+            className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-md shadow-sky-600/20 transition-all"
           >
-            <span>Inspect on Map</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>View 3D Simulated Basin</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

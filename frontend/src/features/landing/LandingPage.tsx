@@ -18,7 +18,7 @@ import {
 import { useAppStore } from '../../stores/useAppStore';
 
 export const LandingPage: React.FC = () => {
-  const { setActiveScreen, selectLake, lakes } = useAppStore();
+  const { setActiveScreen, selectLake, lakes, selectedLake } = useAppStore();
 
   const handleLaunchMap = (lakeName?: string) => {
     setActiveScreen('command-center');
@@ -27,6 +27,34 @@ export const LandingPage: React.FC = () => {
       if (match) {
         selectLake(match.id);
       }
+    } else if (!selectedLake && lakes.length > 0) {
+      const match = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
+      selectLake(match.id);
+    }
+  };
+
+  const handleLaunchComparison = () => {
+    if (!selectedLake && lakes.length > 0) {
+      const match = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
+      selectLake(match.id);
+    }
+    setActiveScreen('comparison-studio');
+  };
+
+  const handleLaunchSimulation = () => {
+    if (!selectedLake && lakes.length > 0) {
+      const match = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
+      selectLake(match.id);
+    }
+    setActiveScreen('restoration-lab');
+  };
+
+  const scrollToSection = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.history.pushState(null, '', `#${id}`);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -48,11 +76,11 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
-            <a href="#audit" className="hover:text-sky-600 transition-colors">Civic Audit</a>
-            <a href="#features" className="hover:text-sky-600 transition-colors">Core Features</a>
-            <a href="#flagship" className="hover:text-sky-600 transition-colors">Flagship Lakes</a>
-            <a href="#simulation" className="hover:text-sky-600 transition-colors">Restoration Lab</a>
-            <a href="#tech" className="hover:text-sky-600 transition-colors">Methodology</a>
+            <a href="#audit" onClick={scrollToSection('audit')} className="hover:text-sky-600 transition-colors">Civic Audit</a>
+            <a href="#features" onClick={scrollToSection('features')} className="hover:text-sky-600 transition-colors">Core Features</a>
+            <a href="#flagship" onClick={scrollToSection('flagship')} className="hover:text-sky-600 transition-colors">Flagship Lakes</a>
+            <a href="#simulation" onClick={scrollToSection('simulation')} className="hover:text-sky-600 transition-colors">Restoration Lab</a>
+            <button onClick={() => setActiveScreen('methodology')} className="hover:text-sky-600 transition-colors font-medium">Methodology</button>
           </nav>
 
           <button
@@ -95,6 +123,7 @@ export const LandingPage: React.FC = () => {
             </button>
             <a
               href="#audit"
+              onClick={scrollToSection('audit')}
               className="flex items-center space-x-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-5 py-3.5 rounded-xl font-medium shadow-sm transition-all"
             >
               <span>View Civic Encroachment Audit</span>
@@ -159,58 +188,70 @@ export const LandingPage: React.FC = () => {
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Feature 1 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all group">
+            <div
+              onClick={() => handleLaunchMap()}
+              className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-sky-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
               <div className="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center mb-4 group-hover:bg-sky-600 group-hover:text-white transition-colors">
                 <MapPin className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">1. Clickable Water Body Map</h3>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-700 transition-colors">1. Clickable Water Body Map</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Full-screen MapLibre GL 3D vector map of 185 lakes. Clicking any lake smoothly zooms in and opens detailed telemetry cards with custody, area, and status.
               </p>
-              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-sky-600">
-                <span>Vector Cadastral Polygons</span>
+              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-sky-600 group-hover:translate-x-1 transition-transform">
+                <span>Explore Interactive Map →</span>
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all group">
+            <div
+              onClick={() => handleLaunchMap()}
+              className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-cyan-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
               <div className="w-12 h-12 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center mb-4 group-hover:bg-cyan-600 group-hover:text-white transition-colors">
                 <Activity className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">2. Area-Over-Time Trend Chart</h3>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-cyan-700 transition-colors">2. Area-Over-Time Trend Chart</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Multi-temporal sparkline plotting surface water area across 2017, 2019, 2021, 2023, and 2024. Click any year dot node to inspect seasonal surface area in hectares.
               </p>
-              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-cyan-600">
-                <span>5-Point Multi-Year Time Series</span>
+              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-cyan-600 group-hover:translate-x-1 transition-transform">
+                <span>View Historical Trends →</span>
               </div>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-red-300 hover:shadow-md transition-all group">
+            <div
+              onClick={() => handleLaunchMap('Bellandur')}
+              className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-red-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
               <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mb-4 group-hover:bg-red-600 group-hover:text-white transition-colors">
                 <TrendingDown className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">3. Automatic Shrinkage Flag</h3>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-red-700 transition-colors">3. Automatic Shrinkage Flag</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Automated detection algorithm flags any water body experiencing ≥ 20% surface area loss since baseline observation, highlighting acute human encroachment.
               </p>
-              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-red-600">
-                <span>Real-Time Alert Threshold</span>
+              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-red-600 group-hover:translate-x-1 transition-transform">
+                <span>Inspect Flagged Lakes (Bellandur) →</span>
               </div>
             </div>
 
             {/* Feature 4 */}
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all group">
+            <div
+              onClick={handleLaunchComparison}
+              className="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all group cursor-pointer"
+            >
               <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                 <Maximize2 className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">4. Side-by-Side Satellite View</h3>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">4. Side-by-Side Satellite View</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Dual photographic observation studio and in-map interactive curtain swipe comparing 2017 baseline vs 2024 contemporary imagery showing buildings and roads.
               </p>
-              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-indigo-600">
-                <span>Curtain Swipe & Dual Inspection</span>
+              <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform">
+                <span>Open Satellite Studio →</span>
               </div>
             </div>
           </div>
@@ -318,9 +359,7 @@ export const LandingPage: React.FC = () => {
             </p>
             <div className="mt-8 flex items-center space-x-3">
               <button
-                onClick={() => {
-                  setActiveScreen('restoration-lab');
-                }}
+                onClick={handleLaunchSimulation}
                 className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl shadow-lg shadow-cyan-500/25 transition-all text-sm flex items-center space-x-2"
               >
                 <Sliders className="w-4 h-4" />

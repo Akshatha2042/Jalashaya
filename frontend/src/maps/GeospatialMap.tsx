@@ -759,11 +759,10 @@ export const GeospatialMap: React.FC = () => {
         {/* Swipe Mode Toggle Button */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all ${
-            isSwipeMode
-              ? 'bg-sky-600 text-white shadow-sm font-bold'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-          }`}
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all ${isSwipeMode
+            ? 'bg-sky-600 text-white shadow-sm font-bold'
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
           title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2024 satellite photos"
         >
           <SplitSquareVertical className="w-3.5 h-3.5" />

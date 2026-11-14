@@ -13,12 +13,65 @@ import { MethodologyView } from './features/methodology/MethodologyView';
 import { LandingPage } from './features/landing/LandingPage';
 
 export const App: React.FC = () => {
-  const { fetchLakes, fetchHealth, isLoadingLakes, activeScreen } = useAppStore();
+  const { fetchLakes, fetchHealth, isLoadingLakes, activeScreen, setActiveScreen, selectedLake, lakes, selectLake } = useAppStore();
 
   useEffect(() => {
     fetchLakes();
     fetchHealth();
   }, [fetchLakes, fetchHealth]);
+
+  // Handle URL Hash navigation on load and when hash changes
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+
+      if (
+        hash === '#audit' ||
+        hash === '#features' ||
+        hash === '#flagship' ||
+        hash === '#simulation' ||
+        hash === '#tech'
+      ) {
+        setActiveScreen('landing');
+        const id = hash.replace('#', '');
+        const scrollToTarget = (attempts = 0) => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          } else if (attempts < 15) {
+            setTimeout(() => scrollToTarget(attempts + 1), 60);
+          }
+        };
+        setTimeout(() => scrollToTarget(0), 50);
+      } else if (hash === '#home' || hash === '#landing' || hash === '' || hash === '#') {
+        setActiveScreen('landing');
+      } else if (hash === '#map' || hash === '#digital-twin') {
+        setActiveScreen('command-center');
+      } else if (hash === '#comparison') {
+        setActiveScreen('comparison-studio');
+      } else if (hash === '#simulation-lab' || hash === '#restoration') {
+        setActiveScreen('restoration-lab');
+      } else if (hash === '#methodology') {
+        setActiveScreen('methodology');
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [setActiveScreen]);
+
+  // Fallback auto-select flagship lake when opening lake-dependent views
+  useEffect(() => {
+    if (
+      (activeScreen === 'comparison-studio' || activeScreen === 'restoration-lab') &&
+      !selectedLake &&
+      lakes.length > 0
+    ) {
+      const bellandur = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
+      selectLake(bellandur.id);
+    }
+  }, [activeScreen, selectedLake, lakes, selectLake]);
 
   if (activeScreen === 'landing') {
     return <LandingPage />;
