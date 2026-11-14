@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   X,
   Sliders,
@@ -14,11 +16,19 @@ import {
   EyeOff,
   ZoomIn,
   ZoomOut,
-  Image as ImageIcon,
-  Layers
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
-import { GeoJSONGeometry } from '../../types';
+
+// Multi-Temporal Sentinel-2 Earth Engine Tile Endpoints by Year
+const SATELLITE_YEAR_TILES: Record<string, string> = {
+  '2017': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/a8627d48c6f5b5770d0a6caee378b758-f342b72bc846fed06e5b377eeeb1778d/tiles/{z}/{x}/{y}',
+  '2019': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/e4fd1c803cb99632c055db244f332f81-82d54ebf1d65ef66f5e0fd3ba85eccde/tiles/{z}/{x}/{y}',
+  '2021': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/4672992e2608c7723bf2d4ae0a19f8f1-d97bbbc563ed8b4b550b750010d39eff/tiles/{z}/{x}/{y}',
+  '2023': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/515bc66b96e4617167c1d9fa967d020b-9828741dc7d78bd99c07e50c468864b0/tiles/{z}/{x}/{y}',
+  '2024': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}'
+};
 
 export const ComparisonStudioModal: React.FC = () => {
   const {
@@ -33,15 +43,14 @@ export const ComparisonStudioModal: React.FC = () => {
     setIsReportModalOpen
   } = useAppStore();
 
-  // Imagery view states
-  const [showOldMask, setShowOldMask] = useState<boolean>(true);
-  const [oldOpacity, setOldOpacity] = useState<number>(0.5);
-  const [oldZoomed, setOldZoomed] = useState<boolean>(false);
+  const mapLeftContainerRef = useRef<HTMLDivElement>(null);
+  const mapRightContainerRef = useRef<HTMLDivElement>(null);
+  const mapLeftRef = useRef<maplibregl.Map | null>(null);
+  const mapRightRef = useRef<maplibregl.Map | null>(null);
+  const isSyncingRef = useRef<boolean>(false);
 
+  const [showOldMask, setShowOldMask] = useState<boolean>(true);
   const [showNewMask, setShowNewMask] = useState<boolean>(true);
-  const [newOpacity, setNewOpacity] = useState<number>(0.55);
-  const [newZoomed, setNewZoomed] = useState<boolean>(false);
-  const [activeLayerMode, setActiveLayerMode] = useState<'all' | 'encroachment' | 'water' | 'raw'>('all');
 
   if (activeScreen !== 'comparison-studio' || !selectedLake) return null;
 
@@ -53,106 +62,242 @@ export const ComparisonStudioModal: React.FC = () => {
 
   const isShrinking = comparisonData && comparisonData.area_change_hectares < 0 && Math.abs(comparisonData.change_percentage) >= 20.0;
 
-  // Compute Lake Bounding Box with margin for satellite capture
-  const lakeBBox = useMemo(() => {
-    if (!selectedLake) return null;
-    let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+  // Initialize and Synchronize Both Multi-Temporal Satellite Maps
+  useEffect(() => {
+    if (!mapLeftContainerRef.current || !mapRightContainerRef.current) return;
 
-    const extract = (coords: any[]) => {
-      if (!Array.isArray(coords)) return;
-      if (typeof coords[0] === 'number') {
-        const [lon, lat] = coords;
-        if (lon < minLon) minLon = lon;
-        if (lon > maxLon) maxLon = lon;
-        if (lat < minLat) minLat = lat;
-        if (lat > maxLat) maxLat = lat;
-      } else {
-        coords.forEach(extract);
+    const center: [number, number] = [selectedLake.longitude, selectedLake.latitude];
+    const initialZoom = 14.2;
+
+    const leftTileUrl = SATELLITE_YEAR_TILES[oldYear] || SATELLITE_YEAR_TILES['2017'];
+    const rightTileUrl = SATELLITE_YEAR_TILES[newYear] || SATELLITE_YEAR_TILES['2024'];
+
+    // 1. Left Map: Baseline Year Satellite Observation
+    const mapLeft = new maplibregl.Map({
+      container: mapLeftContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'gee-satellite-left': {
+            type: 'raster',
+            tiles: [leftTileUrl],
+            tileSize: 256
+          }
+        },
+        layers: [
+          {
+            id: 'gee-satellite-layer-left',
+            type: 'raster',
+            source: 'gee-satellite-left'
+          }
+        ]
+      },
+      center: center,
+      zoom: initialZoom,
+      attributionControl: false
+    });
+
+    // 2. Right Map: Comparison Year Satellite Observation
+    const mapRight = new maplibregl.Map({
+      container: mapRightContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'gee-satellite-right': {
+            type: 'raster',
+            tiles: [rightTileUrl],
+            tileSize: 256
+          }
+        },
+        layers: [
+          {
+            id: 'gee-satellite-layer-right',
+            type: 'raster',
+            source: 'gee-satellite-right'
+          }
+        ]
+      },
+      center: center,
+      zoom: initialZoom,
+      attributionControl: false
+    });
+
+    mapLeftRef.current = mapLeft;
+    mapRightRef.current = mapRight;
+
+    // Synchronize cameras across both viewports
+    const syncView = (source: maplibregl.Map, target: maplibregl.Map) => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      const c = source.getCenter();
+      const z = source.getZoom();
+      target.jumpTo({ center: [c.lng, c.lat], zoom: z });
+      isSyncingRef.current = false;
+    };
+
+    mapLeft.on('move', () => syncView(mapLeft, mapRight));
+    mapRight.on('move', () => syncView(mapRight, mapLeft));
+
+    // Add Vector Polygons when loaded
+    mapLeft.on('load', () => {
+      const waterGeom = olderObs?.water_extent_geometry || selectedLake.boundary_geometry;
+      if (waterGeom) {
+        mapLeft.addSource('water-old', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: waterGeom as any,
+            properties: {}
+          }
+        });
+
+        mapLeft.addLayer({
+          id: 'water-old-fill',
+          type: 'fill',
+          source: 'water-old',
+          paint: {
+            'fill-color': '#168CC5',
+            'fill-opacity': 0.45
+          }
+        });
+
+        mapLeft.addLayer({
+          id: 'water-old-stroke',
+          type: 'line',
+          source: 'water-old',
+          paint: {
+            'line-color': '#47D4DF',
+            'line-width': 2.5
+          }
+        });
       }
-    };
+      mapLeft.resize();
+    });
 
-    if (selectedLake.boundary_geometry?.coordinates) {
-      extract(selectedLake.boundary_geometry.coordinates);
-    }
+    mapRight.on('load', () => {
+      // 1. Current Water Remaining (Blue)
+      if (newerObs?.water_extent_geometry) {
+        mapRight.addSource('water-new', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: newerObs.water_extent_geometry as any,
+            properties: {}
+          }
+        });
 
-    if (minLon === 180) {
-      const d = 0.015;
-      return {
-        minLon: selectedLake.longitude - d,
-        maxLon: selectedLake.longitude + d,
-        minLat: selectedLake.latitude - d,
-        maxLat: selectedLake.latitude + d
-      };
-    }
+        mapRight.addLayer({
+          id: 'water-new-fill',
+          type: 'fill',
+          source: 'water-new',
+          paint: {
+            'fill-color': '#168CC5',
+            'fill-opacity': 0.5
+          }
+        });
 
-    const dLon = (maxLon - minLon) * 0.22 || 0.008;
-    const dLat = (maxLat - minLat) * 0.22 || 0.008;
-
-    return {
-      minLon: +(minLon - dLon).toFixed(5),
-      maxLon: +(maxLon + dLon).toFixed(5),
-      minLat: +(minLat - dLat).toFixed(5),
-      maxLat: +(maxLat + dLat).toFixed(5)
-    };
-  }, [selectedLake]);
-
-  // Actual high-resolution satellite imagery photo URL for the lake
-  const satelliteImageUrl = lakeBBox
-    ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=800,480&f=image`
-    : '';
-
-  // Converts GeoJSON coordinates directly to SVG paths matching satellite bounding box
-  const projectCoordsToSvg = (
-    geom: GeoJSONGeometry | undefined,
-    bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null,
-    w = 800,
-    h = 480
-  ): string => {
-    if (!geom || !geom.coordinates || !bbox) return '';
-
-    const projectPoint = (lon: number, lat: number): [number, number] => {
-      const x = ((lon - bbox.minLon) / (bbox.maxLon - bbox.minLon)) * w;
-      const y = ((bbox.maxLat - lat) / (bbox.maxLat - bbox.minLat)) * h;
-      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
-    };
-
-    const ringToPath = (ring: number[][]): string => {
-      if (!Array.isArray(ring) || ring.length === 0) return '';
-      const pts = ring.map((pt) => projectPoint(pt[0], pt[1]));
-      return `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p) => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
-    };
-
-    try {
-      if (geom.type === 'Polygon') {
-        return geom.coordinates.map(ringToPath).join(' ');
-      } else if (geom.type === 'MultiPolygon') {
-        return geom.coordinates.map((poly: any) => poly.map(ringToPath).join(' ')).join(' ');
+        mapRight.addLayer({
+          id: 'water-new-stroke',
+          type: 'line',
+          source: 'water-new',
+          paint: {
+            'line-color': '#38BDF8',
+            'line-width': 2
+          }
+        });
       }
-    } catch {
-      return '';
+
+      // 2. Lost Water / Encroached Settlement (Red)
+      if (comparisonData?.lost_water_geometry) {
+        mapRight.addSource('water-lost', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: comparisonData.lost_water_geometry as any,
+            properties: {}
+          }
+        });
+
+        mapRight.addLayer({
+          id: 'water-lost-fill',
+          type: 'fill',
+          source: 'water-lost',
+          paint: {
+            'fill-color': '#EF4444',
+            'fill-opacity': 0.52
+          }
+        });
+
+        mapRight.addLayer({
+          id: 'water-lost-stroke',
+          type: 'line',
+          source: 'water-lost',
+          paint: {
+            'line-color': '#EF4444',
+            'line-width': 2.5,
+            'line-dasharray': [3, 2]
+          }
+        });
+      }
+      mapRight.resize();
+    });
+
+    // Handle initial modal layout expansion
+    const resizeTimer = setTimeout(() => {
+      mapLeft.resize();
+      mapRight.resize();
+    }, 200);
+
+    return () => {
+      clearTimeout(resizeTimer);
+      mapLeft.remove();
+      mapRight.remove();
+      mapLeftRef.current = null;
+      mapRightRef.current = null;
+    };
+  }, [selectedLake, oldYear, newYear, comparisonOlderId, comparisonNewerId]);
+
+  // Toggle vector masks on and off
+  const toggleOldMask = () => {
+    const next = !showOldMask;
+    setShowOldMask(next);
+    const map = mapLeftRef.current;
+    if (map && map.getLayer('water-old-fill')) {
+      map.setLayoutProperty('water-old-fill', 'visibility', next ? 'visible' : 'none');
+      map.setLayoutProperty('water-old-stroke', 'visibility', next ? 'visible' : 'none');
     }
-    return '';
   };
 
-  const oldWaterPath = useMemo(
-    () => projectCoordsToSvg(olderObs?.water_extent_geometry || selectedLake?.boundary_geometry, lakeBBox),
-    [olderObs, selectedLake, lakeBBox]
-  );
+  const toggleNewMask = () => {
+    const next = !showNewMask;
+    setShowNewMask(next);
+    const map = mapRightRef.current;
+    if (map) {
+      if (map.getLayer('water-lost-fill')) {
+        map.setLayoutProperty('water-lost-fill', 'visibility', next ? 'visible' : 'none');
+        map.setLayoutProperty('water-lost-stroke', 'visibility', next ? 'visible' : 'none');
+      }
+      if (map.getLayer('water-new-fill')) {
+        map.setLayoutProperty('water-new-fill', 'visibility', next ? 'visible' : 'none');
+        map.setLayoutProperty('water-new-stroke', 'visibility', next ? 'visible' : 'none');
+      }
+    }
+  };
 
-  const newWaterPath = useMemo(
-    () => projectCoordsToSvg(newerObs?.water_extent_geometry, lakeBBox),
-    [newerObs, lakeBBox]
-  );
+  const handleZoom = (delta: number) => {
+    if (mapLeftRef.current) {
+      mapLeftRef.current.zoomTo(mapLeftRef.current.getZoom() + delta);
+    }
+  };
 
-  const lostWaterPath = useMemo(
-    () => projectCoordsToSvg(comparisonData?.lost_water_geometry, lakeBBox),
-    [comparisonData, lakeBBox]
-  );
-
-  const cadastralPath = useMemo(
-    () => projectCoordsToSvg(selectedLake?.boundary_geometry, lakeBBox),
-    [selectedLake, lakeBBox]
-  );
+  const handleResetCamera = () => {
+    if (mapLeftRef.current && selectedLake) {
+      mapLeftRef.current.flyTo({
+        center: [selectedLake.longitude, selectedLake.latitude],
+        zoom: 14.2
+      });
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-[#101A20]/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -161,7 +306,7 @@ export const ComparisonStudioModal: React.FC = () => {
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-[#168CC5]/20 text-[#47D4DF]">
-              <ImageIcon className="w-5 h-5" />
+              <Sliders className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -171,7 +316,7 @@ export const ComparisonStudioModal: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-[#8D9A9A]">
-                Multi-temporal satellite imagery: Baseline pristine water body vs contemporary urban encroachment
+                Multi-temporal Sentinel-2 imagery: {oldYear} pristine baseline pass vs {newYear} contemporary urban encroachment
               </p>
             </div>
           </div>
@@ -247,7 +392,7 @@ export const ComparisonStudioModal: React.FC = () => {
 
         {/* Comparison Content */}
         <div className="p-5 overflow-y-auto space-y-5">
-          {/* Core Feature 4: Side-by-side images from two years */}
+          {/* Synchronized Side-by-Side Satellite Viewports */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Year 1 Satellite View Card */}
             <div className="bg-[#142D3B]/40 border border-white/10 rounded-2xl p-4 space-y-3 relative overflow-hidden group">
@@ -263,90 +408,56 @@ export const ComparisonStudioModal: React.FC = () => {
                 </span>
               </div>
 
-              {/* Real Satellite Photo Container */}
-              <div className="relative h-60 md:h-64 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] select-none shadow-inner">
-                {/* Photographic Satellite Imagery */}
-                <img
-                  src={satelliteImageUrl}
-                  alt={`${selectedLake.official_name} ${oldYear} Satellite Image`}
-                  className={`w-full h-full object-cover transition-transform duration-300 ${
-                    oldZoomed ? 'scale-150' : 'scale-100'
-                  }`}
-                  loading="lazy"
-                />
-
-                {/* SVG Water Vector Overlay */}
-                {showOldMask && oldWaterPath && (
-                  <svg
-                    viewBox="0 0 800 480"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200"
-                    style={{ opacity: oldOpacity }}
-                  >
-                    <defs>
-                      <radialGradient id="waterGlowOld" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#47D4DF" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#168CC5" stopOpacity="0.65" />
-                      </radialGradient>
-                    </defs>
-                    <path
-                      d={oldWaterPath}
-                      fill="url(#waterGlowOld)"
-                      stroke="#47D4DF"
-                      strokeWidth="2.5"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
+              {/* MapLibre Synchronized Satellite Map Container */}
+              <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] shadow-inner">
+                <div ref={mapLeftContainerRef} className="w-full h-full" />
 
                 {/* Badges on top of satellite photo */}
-                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5">
+                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
                   <span className="text-[10px] font-mono text-white bg-[#101A20]/85 backdrop-blur-md border border-white/20 px-2.5 py-0.5 rounded-full flex items-center space-x-1 shadow-lg">
-                    <span>🛰️ High-Res Satellite View</span>
+                    <span>🛰️ Sentinel-2 {oldYear} True-Color Pass</span>
                   </span>
                   <span className="text-[9px] font-mono text-[#34D399] bg-[#10B981]/25 backdrop-blur-md border border-[#10B981]/50 px-2 py-0.5 rounded-full font-semibold">
-                    ✓ Full Water Spread
+                    Full Water Body Extent
                   </span>
                 </div>
 
                 {/* Interactive Controls Overlay at Bottom */}
                 <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-[#101A20]/90 backdrop-blur-md border border-white/15 rounded-lg px-2.5 py-1.5 text-[10px]">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setShowOldMask(!showOldMask)}
-                      className={`px-2 py-0.5 rounded font-mono font-medium flex items-center space-x-1 transition-colors ${
-                        showOldMask ? 'bg-[#168CC5] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
-                      }`}
-                      title={showOldMask ? 'Hide vector overlay to view pure satellite photo' : 'Show detected water boundary'}
-                    >
-                      {showOldMask ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      <span>{showOldMask ? 'Water Boundary Mask' : 'Pure Satellite Photo'}</span>
-                    </button>
-
-                    {showOldMask && (
-                      <div className="flex items-center space-x-1.5 hidden sm:flex">
-                        <span className="text-[#8D9A9A]">Mask:</span>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="1"
-                          step="0.05"
-                          value={oldOpacity}
-                          onChange={(e) => setOldOpacity(parseFloat(e.target.value))}
-                          className="w-14 h-1 accent-[#47D4DF] cursor-pointer"
-                        />
-                        <span className="font-mono text-white text-[9px]">{Math.round(oldOpacity * 100)}%</span>
-                      </div>
-                    )}
-                  </div>
-
                   <button
-                    onClick={() => setOldZoomed(!oldZoomed)}
-                    className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
-                    title={oldZoomed ? 'Zoom Out' : 'Zoom In on Satellite Imagery'}
+                    onClick={toggleOldMask}
+                    className={`px-2.5 py-1 rounded font-mono font-medium flex items-center space-x-1.5 transition-colors ${
+                      showOldMask ? 'bg-[#168CC5] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
+                    }`}
+                    title={showOldMask ? 'Click to see 100% pure photographic satellite imagery' : 'Click to show detected water boundary'}
                   >
-                    {oldZoomed ? <ZoomOut className="w-3.5 h-3.5" /> : <ZoomIn className="w-3.5 h-3.5" />}
+                    {showOldMask ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    <span>{showOldMask ? 'Water Boundary Mask' : 'Pure Satellite Photo'}</span>
                   </button>
+
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleZoom(0.5)}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleZoom(-0.5)}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={handleResetCamera}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Reset Center"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -359,9 +470,9 @@ export const ComparisonStudioModal: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#8D9A9A] block">Sensor / Source</span>
-                  <span className="text-white text-[11px] truncate block">
-                    {olderObs?.satellite_source || 'Sentinel-2A'} (10m)
+                  <span className="text-[10px] text-[#8D9A9A] block">Sensor / Resolution</span>
+                  <span className="text-white text-[11px] truncate block font-mono">
+                    Sentinel-2 MSI • 10m Ground Res
                   </span>
                 </div>
               </div>
@@ -381,55 +492,14 @@ export const ComparisonStudioModal: React.FC = () => {
                 </span>
               </div>
 
-              {/* Real Satellite Photo Container */}
-              <div className="relative h-60 md:h-64 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] select-none shadow-inner">
-                {/* Photographic Satellite Imagery showing Real Buildings & Roads */}
-                <img
-                  src={satelliteImageUrl}
-                  alt={`${selectedLake.official_name} ${newYear} Satellite Image`}
-                  className={`w-full h-full object-cover transition-transform duration-300 ${
-                    newZoomed ? 'scale-150' : 'scale-100'
-                  }`}
-                  loading="lazy"
-                />
-
-                {/* SVG Vector Alignment: Active Water + Red Encroached Settlement Zone */}
-                {showNewMask && (
-                  <svg
-                    viewBox="0 0 800 480"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200"
-                    style={{ opacity: newOpacity }}
-                  >
-                    {/* Remaining Active Water (Cyan/Blue) */}
-                    {newWaterPath && (activeLayerMode === 'all' || activeLayerMode === 'water') && (
-                      <path
-                        d={newWaterPath}
-                        fill="rgba(22, 140, 197, 0.55)"
-                        stroke="#168CC5"
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                      />
-                    )}
-
-                    {/* Human Encroachment / Lost Water (Red Translucent Mask over Buildings) */}
-                    {lostWaterPath && (activeLayerMode === 'all' || activeLayerMode === 'encroachment') && (
-                      <path
-                        d={lostWaterPath}
-                        fill="rgba(239, 68, 68, 0.52)"
-                        stroke="#EF4444"
-                        strokeWidth="2.5"
-                        strokeDasharray="4 2"
-                        strokeLinejoin="round"
-                      />
-                    )}
-                  </svg>
-                )}
+              {/* MapLibre Synchronized Satellite Map Container */}
+              <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-white/15 bg-[#0B1216] shadow-inner">
+                <div ref={mapRightContainerRef} className="w-full h-full" />
 
                 {/* Badges on top of contemporary satellite photo */}
-                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5">
+                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
                   <span className="text-[10px] font-mono text-white bg-[#101A20]/85 backdrop-blur-md border border-white/20 px-2.5 py-0.5 rounded-full flex items-center space-x-1 shadow-lg">
-                    <span>🛰️ High-Res Satellite View</span>
+                    <span>🛰️ Sentinel-2 {newYear} True-Color Pass</span>
                   </span>
                   {isShrinking ? (
                     <span className="text-[9px] font-mono text-[#F87171] bg-[#EF4444]/30 backdrop-blur-md border border-[#EF4444]/50 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1 animate-pulse">
@@ -445,45 +515,40 @@ export const ComparisonStudioModal: React.FC = () => {
 
                 {/* Interactive Controls Overlay at Bottom */}
                 <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-[#101A20]/90 backdrop-blur-md border border-white/15 rounded-lg px-2.5 py-1.5 text-[10px]">
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      onClick={() => {
-                        setShowNewMask(true);
-                        setActiveLayerMode(activeLayerMode === 'raw' ? 'all' : 'raw');
-                      }}
-                      className={`px-2 py-0.5 rounded font-mono font-medium flex items-center space-x-1 transition-colors ${
-                        activeLayerMode !== 'raw' ? 'bg-[#EF4444] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
-                      }`}
-                      title={activeLayerMode !== 'raw' ? 'Click to view pure satellite photograph' : 'Click to highlight human encroachment'}
-                    >
-                      {activeLayerMode !== 'raw' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      <span>{activeLayerMode !== 'raw' ? 'Encroachment Highlight' : 'Pure Satellite Photo'}</span>
-                    </button>
-
-                    {activeLayerMode !== 'raw' && (
-                      <div className="flex items-center space-x-1.5 hidden sm:flex">
-                        <span className="text-[#8D9A9A]">Mask:</span>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="1"
-                          step="0.05"
-                          value={newOpacity}
-                          onChange={(e) => setNewOpacity(parseFloat(e.target.value))}
-                          className="w-14 h-1 accent-[#EF4444] cursor-pointer"
-                        />
-                        <span className="font-mono text-white text-[9px]">{Math.round(newOpacity * 100)}%</span>
-                      </div>
-                    )}
-                  </div>
-
                   <button
-                    onClick={() => setNewZoomed(!newZoomed)}
-                    className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
-                    title={newZoomed ? 'Zoom Out' : 'Zoom In on Satellite Imagery'}
+                    onClick={toggleNewMask}
+                    className={`px-2.5 py-1 rounded font-mono font-medium flex items-center space-x-1.5 transition-colors ${
+                      showNewMask ? 'bg-[#EF4444] text-white' : 'bg-white/10 text-[#8D9A9A] hover:text-white'
+                    }`}
+                    title={showNewMask ? 'Click to see 100% pure photographic satellite imagery' : 'Click to highlight human encroachment'}
                   >
-                    {newZoomed ? <ZoomOut className="w-3.5 h-3.5" /> : <ZoomIn className="w-3.5 h-3.5" />}
+                    {showNewMask ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    <span>{showNewMask ? 'Encroachment Highlight' : 'Pure Satellite Photo'}</span>
                   </button>
+
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleZoom(0.5)}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleZoom(-0.5)}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={handleResetCamera}
+                      className="p-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Reset Center"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
