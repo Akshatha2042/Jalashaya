@@ -12,7 +12,9 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  TrendingDown,
+  Calendar
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -21,6 +23,7 @@ export const LakeTelemetryCard: React.FC = () => {
     selectedLake,
     observations,
     selectedObservationIndex,
+    setSelectedObservationIndex,
     comparisonData,
     layers,
     toggleLayer,
@@ -40,6 +43,46 @@ export const LakeTelemetryCard: React.FC = () => {
   const coverageRatio = cadastralArea > 0 ? Math.min(100, Math.round((detectedArea / cadastralArea) * 100)) : 0;
   const isEncroached = (selectedLake.encroachment_status || '').toLowerCase().includes('encroached');
 
+  // Core Requirement: Area-over-time chart data
+  const trendPoints = observations.map((o) => ({
+    year: o.observation_date.split('-')[0],
+    date: o.observation_date,
+    area: o.detected_area_hectares ?? 0
+  }));
+
+  const baselineArea = trendPoints.length > 0 ? trendPoints[0].area : cadastralArea;
+  const currentArea = currentObservation?.detected_area_hectares ?? baselineArea;
+  const shrinkPct = baselineArea > 0 ? ((baselineArea - currentArea) / baselineArea) * 100 : 0;
+
+  // Core Requirement: Automatic flag when size drops past a set threshold (20% contraction threshold)
+  const SHRINK_THRESHOLD_PCT = 20.0;
+  const isShrinkingPastThreshold = shrinkPct >= SHRINK_THRESHOLD_PCT;
+
+  // SVG Chart Geometry calculations
+  const maxArea = Math.max(...trendPoints.map((p) => p.area), cadastralArea, 1);
+  const chartWidth = 280;
+  const chartHeight = 65;
+  const padX = 16;
+  const padY = 12;
+
+  const coords = trendPoints.map((p, idx) => {
+    const x = padX + (idx / Math.max(1, trendPoints.length - 1)) * (chartWidth - 2 * padX);
+    const y = chartHeight - padY - (p.area / maxArea) * (chartHeight - 2 * padY);
+    return { x, y, ...p };
+  });
+
+  const pathD = coords.reduce((acc, c, idx) => {
+    return idx === 0 ? `M ${c.x} ${c.y}` : `${acc} L ${c.x} ${c.y}`;
+  }, '');
+
+  const areaD = coords.length > 0
+    ? `${pathD} L ${coords[coords.length - 1].x} ${chartHeight - padY} L ${coords[0].x} ${chartHeight - padY} Z`
+    : '';
+
+  // 20% Threshold line
+  const thresholdAreaVal = baselineArea * 0.8;
+  const thresholdY = chartHeight - padY - (thresholdAreaVal / maxArea) * (chartHeight - 2 * padY);
+
   return (
     <aside className="absolute top-[62px] right-4 z-30 pointer-events-auto">
       {/* 1. Minimized Pill */}
@@ -53,11 +96,14 @@ export const LakeTelemetryCard: React.FC = () => {
           <span className="font-mono text-[#47D4DF] font-bold">
             {detectedArea.toFixed(1)} ha
           </span>
+          {isShrinkingPastThreshold && (
+            <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-ping" title="Shrinking Alert" />
+          )}
           <ChevronDown className="w-3.5 h-3.5 text-[#8D9A9A]" />
         </button>
       ) : (
         /* 2. Compact Refined Glass HUD Card */
-        <div className="w-84 bg-[#101A20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-4 space-y-3.5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-88 bg-[#101A20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 max-h-[82vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-start justify-between border-b border-white/10 pb-2.5">
             <div>
@@ -89,7 +135,7 @@ export const LakeTelemetryCard: React.FC = () => {
                 activeTab === 'metrics' ? 'bg-[#168CC5] text-white shadow' : 'text-[#8D9A9A] hover:text-white'
               }`}
             >
-              Telemetry & Audit
+              Telemetry & History
             </button>
             <button
               onClick={() => setActiveTab('layers')}
@@ -101,9 +147,29 @@ export const LakeTelemetryCard: React.FC = () => {
             </button>
           </div>
 
-          {/* Tab 1: Telemetry Metrics */}
+          {/* Tab 1: Telemetry & Area-over-Time */}
           {activeTab === 'metrics' ? (
             <div className="space-y-3">
+              {/* Core Requirement 3: Automatic Flag when size drops past threshold */}
+              {isShrinkingPastThreshold ? (
+                <div className="flex items-center space-x-2 bg-[#EF4444]/20 border border-[#EF4444]/50 p-2.5 rounded-xl text-xs text-[#F87171] animate-in fade-in duration-200">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-[#EF4444] animate-pulse" />
+                  <div>
+                    <span className="font-bold block text-[11px] uppercase tracking-wide">
+                      ⚠️ Automatic Flag: Shrinking Past Threshold
+                    </span>
+                    <span className="text-[10px] text-white/90">
+                      Water extent contracted by <span className="font-mono font-bold text-white">-{shrinkPct.toFixed(1)}%</span> from baseline (Threshold: 20%).
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 bg-[#10B981]/15 border border-[#10B981]/40 p-2 rounded-xl text-[10.5px] text-[#34D399]">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[#10B981]" />
+                  <span>Stable Water Body: Surface extent within standard seasonal threshold.</span>
+                </div>
+              )}
+
               {/* Dual Metric Box */}
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-[#142D3B]/50 border border-white/5 rounded-xl p-2.5">
@@ -115,7 +181,7 @@ export const LakeTelemetryCard: React.FC = () => {
                     <span className="text-[10px] text-[#8D9A9A]">ha</span>
                   </div>
                   <span className="text-[9px] text-[#8D9A9A] mt-0.5 block font-mono">
-                    {coverageRatio}% coverage
+                    {coverageRatio}% of basin
                   </span>
                 </div>
 
@@ -129,6 +195,105 @@ export const LakeTelemetryCard: React.FC = () => {
                   </div>
                   <span className="text-[9px] text-[#8D9A9A] mt-0.5 block font-mono">
                     BBMP Master Extent
+                  </span>
+                </div>
+              </div>
+
+              {/* Core Requirement 2: Area-over-time chart for each water body */}
+              <div className="bg-[#142D3B]/40 border border-white/10 rounded-xl p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center space-x-1.5 text-white font-semibold">
+                    <TrendingDown className="w-3 h-3 text-[#47D4DF]" />
+                    <span>Area-over-Time Trend</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-[9px] font-mono text-[#8D9A9A]">
+                    <span className="flex items-center space-x-1">
+                      <span className="w-2 h-0.5 bg-[#47D4DF]" />
+                      <span>Water</span>
+                    </span>
+                    <span className="flex items-center space-x-1">
+                      <span className="w-2 border-t border-dashed border-[#EF4444]" />
+                      <span>-20% Threshold</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* SVG Line / Area Sparkline Chart */}
+                <div className="relative">
+                  <svg
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                    className="w-full h-16 overflow-visible"
+                  >
+                    <defs>
+                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#47D4DF" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#168CC5" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Threshold Dashed Line (-20%) */}
+                    <line
+                      x1={padX}
+                      y1={thresholdY}
+                      x2={chartWidth - padX}
+                      y2={thresholdY}
+                      stroke="#EF4444"
+                      strokeWidth="1"
+                      strokeDasharray="3 3"
+                      opacity="0.8"
+                    />
+
+                    {/* Area fill */}
+                    {areaD && <path d={areaD} fill="url(#areaGradient)" />}
+
+                    {/* Line stroke */}
+                    {pathD && (
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="#47D4DF"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    )}
+
+                    {/* Interactive Points */}
+                    {coords.map((c, idx) => {
+                      const isSelected = selectedObservationIndex === idx;
+                      return (
+                        <g
+                          key={c.year}
+                          className="cursor-pointer"
+                          onClick={() => setSelectedObservationIndex(idx)}
+                        >
+                          <circle
+                            cx={c.x}
+                            cy={c.y}
+                            r={isSelected ? 4.5 : 3}
+                            fill={isSelected ? '#47D4DF' : '#101A20'}
+                            stroke={isSelected ? '#FFFFFF' : '#47D4DF'}
+                            strokeWidth="2"
+                          />
+                          <text
+                            x={c.x}
+                            y={chartHeight - 1}
+                            textAnchor="middle"
+                            fill={isSelected ? '#47D4DF' : '#8D9A9A'}
+                            fontSize="8"
+                            fontFamily="monospace"
+                          >
+                            {c.year}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                <div className="flex items-center justify-between text-[9px] font-mono text-[#8D9A9A] pt-0.5 border-t border-white/5">
+                  <span>2017: {trendPoints[0]?.area.toFixed(1)} ha</span>
+                  <span className={shrinkPct > 20 ? 'text-[#F87171] font-bold' : 'text-white'}>
+                    2024: {trendPoints[trendPoints.length - 1]?.area.toFixed(1)} ha
                   </span>
                 </div>
               </div>
@@ -169,40 +334,6 @@ export const LakeTelemetryCard: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Multi-Year Delta Banner if comparison exists */}
-              {comparisonData && (
-                <div className="bg-[#142D3B]/40 border border-white/5 rounded-xl p-2.5 flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-1.5">
-                    {comparisonData.is_gain ? (
-                      <ArrowUpRight className="w-4 h-4 text-[#329B71]" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-[#EF4444]" />
-                    )}
-                    <div>
-                      <span className="text-[10px] text-[#8D9A9A] block">
-                        {comparisonData.is_gain ? 'Water Recharge' : 'Encroached Since Baseline'}
-                      </span>
-                      <span
-                        className={`font-mono font-bold ${
-                          comparisonData.is_gain ? 'text-[#329B71]' : 'text-[#EF4444]'
-                        }`}
-                      >
-                        {comparisonData.is_gain ? '+' : '-'}
-                        {Math.abs(comparisonData.area_change_hectares).toFixed(1)} ha ({Math.abs(comparisonData.change_percentage).toFixed(1)}%)
-                      </span>
-                    </div>
-                  </div>
-
-                  <span
-                    className={`text-[9px] font-mono px-2 py-0.5 rounded font-semibold ${
-                      comparisonData.is_gain ? 'bg-[#329B71]/20 text-[#329B71]' : 'bg-[#EF4444]/20 text-[#EF4444]'
-                    }`}
-                  >
-                    {!comparisonData.is_gain ? 'Encroached' : comparisonData.change_classification}
-                  </span>
-                </div>
-              )}
             </div>
           ) : (
             /* Tab 2: Map Layers Toggle */
@@ -263,7 +394,7 @@ export const LakeTelemetryCard: React.FC = () => {
               onClick={() => setActiveScreen('comparison-studio')}
               className="py-1.5 px-2 bg-white/5 hover:bg-white/10 text-[#47D4DF] rounded-lg text-center font-medium transition-colors"
             >
-              Compare
+              Side-by-Side
             </button>
             <button
               onClick={() => setActiveScreen('restoration-lab')}
