@@ -263,14 +263,18 @@ export const LeftMenuDrawer: React.FC = () => {
               {activeTab === 'tools' && (
                 <div className="space-y-2.5 text-xs">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsOpen(false);
+                      if (!selectedLake && lakes.length > 0) {
+                        const bellandur = lakes.find((l) => l.id === 'lake-bellandur') || lakes[0];
+                        await selectLake(bellandur.id);
+                      }
                       setActiveScreen('comparison-studio');
                     }}
                     className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between font-medium text-slate-800 transition-colors"
                   >
                     <span className="flex items-center space-x-2">
-                      <Maximize2 className="w-4 h-4 text-sky-600" />
+                      <Sliders className="w-4 h-4 text-sky-600" />
                       <span>Side-by-Side Satellite Studio</span>
                     </span>
                     <ChevronRight className="w-4 h-4 text-slate-400" />

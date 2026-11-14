@@ -47,7 +47,7 @@ export const App: React.FC = () => {
         setActiveScreen('landing');
       } else if (hash === '#map' || hash === '#digital-twin') {
         setActiveScreen('command-center');
-      } else if (hash === '#comparison') {
+      } else if (hash === '#comparison' || hash === '#compare') {
         setActiveScreen('comparison-studio');
       } else if (hash === '#simulation-lab' || hash === '#restoration') {
         setActiveScreen('restoration-lab');

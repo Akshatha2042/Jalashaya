@@ -1,22 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   X,
   Sliders,
-  ArrowDownRight,
-  ArrowUpRight,
-  Calendar,
-  AlertCircle,
-  FileText,
-  AlertTriangle,
-  CheckCircle2,
   Maximize2,
   Eye,
   EyeOff,
-  ZoomIn,
-  ZoomOut,
+  AlertTriangle,
+  FileText,
+  SplitSquareVertical,
   Layers,
   Sparkles,
-  Info
+  TrendingDown,
+  Info,
+  CheckCircle2,
+  Calendar,
+  ChevronRight
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 import { GeoJSONGeometry } from '../../types';
@@ -25,33 +23,138 @@ export const ComparisonStudioModal: React.FC = () => {
   const {
     activeScreen,
     setActiveScreen,
+    lakes,
+    selectLake,
+    fetchLakes,
     selectedLake,
     observations,
+    isLoadingObservations,
     comparisonOlderId,
     comparisonNewerId,
     comparisonData,
+    isLoadingComparison,
     runComparison,
     setIsReportModalOpen,
     setIsSwipeMode
   } = useAppStore();
 
+  const [viewMode, setViewMode] = useState<'dual' | 'curtain'>('dual');
   const [showOldMask, setShowOldMask] = useState<boolean>(true);
   const [oldZoom, setOldZoom] = useState<number>(1);
   const [showNewMask, setShowNewMask] = useState<boolean>(true);
   const [newZoom, setNewZoom] = useState<number>(1);
-  const [maskOpacity, setMaskOpacity] = useState<number>(0.6);
+  const [maskOpacity, setMaskOpacity] = useState<number>(0.65);
+  const [curtainPos, setCurtainPos] = useState<number>(50);
+  const [isCurtainDragging, setIsCurtainDragging] = useState<boolean>(false);
+  const curtainBoxRef = useRef<HTMLDivElement>(null);
 
-  if (activeScreen !== 'comparison-studio' || !selectedLake) return null;
+  // Auto-select lake and ensure comparisons run on modal open
+  useEffect(() => {
+    if (activeScreen === 'comparison-studio') {
+      if (!selectedLake) {
+        if (lakes.length > 0) {
+          const bellandur = lakes.find((l) => l.id === 'lake-bellandur') || lakes[0];
+          selectLake(bellandur.id);
+        } else {
+          fetchLakes();
+        }
+        return;
+      }
 
-  const olderObs = observations.find((o) => o.id === comparisonOlderId) || observations[0];
-  const newerObs = observations.find((o) => o.id === comparisonNewerId) || observations[observations.length - 1];
+      if (observations.length >= 2) {
+        const hasOlder = observations.some((o) => o.id === comparisonOlderId);
+        const hasNewer = observations.some((o) => o.id === comparisonNewerId);
+        const olderId = hasOlder ? comparisonOlderId! : observations[0].id;
+        const newerId = hasNewer ? comparisonNewerId! : observations[observations.length - 1].id;
+
+        const needsRun =
+          !comparisonData ||
+          comparisonData.lake_id !== selectedLake.id ||
+          comparisonData.older_date !== observations.find((o) => o.id === olderId)?.observation_date ||
+          comparisonData.newer_date !== observations.find((o) => o.id === newerId)?.observation_date;
+
+        if (needsRun && !isLoadingComparison) {
+          runComparison(olderId, newerId);
+        }
+      }
+    }
+  }, [
+    activeScreen,
+    selectedLake,
+    lakes,
+    observations,
+    comparisonData,
+    isLoadingComparison,
+    comparisonOlderId,
+    comparisonNewerId,
+    selectLake,
+    fetchLakes,
+    runComparison
+  ]);
+
+  // Curtain slider drag handlers
+  const handleCurtainMove = (clientX: number) => {
+    if (!curtainBoxRef.current) return;
+    const rect = curtainBoxRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const pct = Math.max(5, Math.min(95, (x / rect.width) * 100));
+    setCurtainPos(pct);
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isCurtainDragging) return;
+      handleCurtainMove(e.clientX);
+    };
+    const onMouseUp = () => setIsCurtainDragging(false);
+
+    if (isCurtainDragging) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isCurtainDragging]);
+
+  if (activeScreen !== 'comparison-studio') return null;
+
+  if (!selectedLake || isLoadingObservations || observations.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in duration-150">
+          <div className="w-10 h-10 rounded-full border-3 border-sky-600 border-t-transparent animate-spin" />
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loading Satellite Comparison...</h3>
+            <p className="text-xs text-slate-500 mt-1">Retrieving Sentinel-2 imagery & cadastral measurements...</p>
+          </div>
+          <button
+            onClick={() => setActiveScreen('command-center')}
+            className="text-xs text-slate-400 hover:text-slate-600 underline pt-2"
+          >
+            Return to Map
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Safe observations resolution
+  const olderObs =
+    observations.find((o) => o.id === comparisonOlderId) || observations[0];
+  const newerObs =
+    observations.find((o) => o.id === comparisonNewerId) || observations[observations.length - 1];
 
   const oldYear = olderObs ? olderObs.observation_date.split('-')[0] : '2017';
   const newYear = newerObs ? newerObs.observation_date.split('-')[0] : '2026';
 
-  const isShrinking = comparisonData && comparisonData.area_change_hectares < 0 && Math.abs(comparisonData.change_percentage) >= 20.0;
+  const isShrinking =
+    comparisonData &&
+    comparisonData.area_change_hectares < 0 &&
+    Math.abs(comparisonData.change_percentage) >= 20.0;
 
-  // Calculate sharp geographic bounding box for the lake
+  // Geographic bounding box for accurate satellite imagery framing
   const lakeBBox = useMemo(() => {
     if (!selectedLake) return null;
     let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
@@ -76,15 +179,15 @@ export const ComparisonStudioModal: React.FC = () => {
     if (minLon === 180) {
       const d = 0.015;
       return {
-        minLon: selectedLake.longitude - d,
-        maxLon: selectedLake.longitude + d,
-        minLat: selectedLake.latitude - d,
-        maxLat: selectedLake.latitude + d
+        minLon: +(selectedLake.longitude - d).toFixed(5),
+        maxLon: +(selectedLake.longitude + d).toFixed(5),
+        minLat: +(selectedLake.latitude - d).toFixed(5),
+        maxLat: +(selectedLake.latitude + d).toFixed(5)
       };
     }
 
-    const dLon = (maxLon - minLon) * 0.2 || 0.008;
-    const dLat = (maxLat - minLat) * 0.2 || 0.008;
+    const dLon = (maxLon - minLon) * 0.22 || 0.008;
+    const dLat = (maxLat - minLat) * 0.22 || 0.008;
 
     return {
       minLon: +(minLon - dLon).toFixed(5),
@@ -94,15 +197,12 @@ export const ComparisonStudioModal: React.FC = () => {
     };
   }, [selectedLake]);
 
-  // High-Resolution Satellite imagery URL (Supports Google Maps Static Satellite or Esri Sub-Meter export)
-  const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+  // Satellite imagery URL from Esri sub-meter aerial imagery
   const highResSatelliteUrl = lakeBBox
-    ? googleApiKey
-      ? `https://maps.googleapis.com/maps/api/staticmap?center=${selectedLake.latitude},${selectedLake.longitude}&zoom=15&size=1024x640&maptype=hybrid&key=${googleApiKey}`
-      : `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
+    ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
     : '';
 
-  // Project vector geometries accurately onto the satellite image coordinate frame
+  // Project vector geometries accurately onto the 1024x640 satellite image coordinate frame
   const projectCoordsToSvg = (
     geom: GeoJSONGeometry | undefined,
     bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null,
@@ -150,46 +250,104 @@ export const ComparisonStudioModal: React.FC = () => {
     [comparisonData, lakeBBox]
   );
 
+  const handleApplyPreset = (olderYear: string, newerYear: string) => {
+    const o = observations.find((x) => x.observation_date.startsWith(olderYear)) || observations[0];
+    const n =
+      observations.find((x) => x.observation_date.startsWith(newerYear)) ||
+      observations[observations.length - 1];
+    if (o && n) {
+      runComparison(o.id, n.id);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Modal Header in Clean Light Theme */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-sky-100 text-sky-700">
+    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        {/* Modal Header */}
+        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/95">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-sky-600 text-white shadow-sm shadow-sky-600/20">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-base font-bold text-slate-900">Side-by-Side Satellite Comparison Studio</h3>
-                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
-                  {selectedLake.official_name}
-                </span>
+              <div className="flex items-center space-x-2.5">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Satellite Comparison Studio
+                </h3>
+                {lakes.length > 0 && (
+                  <select
+                    value={selectedLake.id}
+                    onChange={(e) => selectLake(e.target.value)}
+                    className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white text-slate-800 border border-slate-300 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer shadow-xs"
+                    title="Select lake for comparison"
+                  >
+                    {lakes.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.official_name} ({l.area_hectares.toFixed(1)} ha)
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {isShrinking && (
+                  <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 text-[10px] font-mono font-bold">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Shrinkage ≥ 20%</span>
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-500">
-                High-definition photographic comparison: {oldYear} pristine baseline vs {newYear} contemporary urban encroachment
+              <p className="text-xs text-slate-500 mt-0.5">
+                Multi-temporal Sentinel-2 MSI observations: {oldYear} pristine baseline vs {newYear} contemporary urban encroachment
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setActiveScreen('command-center')}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* View Mode Switcher & Close Button */}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center bg-slate-200/80 p-0.5 rounded-lg text-xs font-semibold">
+              <button
+                onClick={() => setViewMode('dual')}
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center space-x-1.5 ${
+                  viewMode === 'dual'
+                    ? 'bg-white text-sky-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>⊞ Side-by-Side</span>
+              </button>
+              <button
+                onClick={() => setViewMode('curtain')}
+                className={`px-3 py-1.5 rounded-md transition-all flex items-center space-x-1.5 ${
+                  viewMode === 'curtain'
+                    ? 'bg-white text-sky-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <SplitSquareVertical className="w-3.5 h-3.5" />
+                <span>⇹ Curtain Swipe</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setActiveScreen('command-center')}
+              className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/70 transition-colors"
+              title="Close Comparison Studio"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Date Selector Row */}
-        <div className="p-3.5 bg-slate-100/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex items-center space-x-4">
-            <div>
-              <label className="text-[10px] font-mono uppercase text-slate-500 font-bold block mb-1">
-                Baseline (Year 1)
+        {/* Date Selector & Preset Toolbar */}
+        <div className="px-4 py-3 bg-slate-100/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center space-x-2">
+              <label className="text-[10px] font-mono uppercase text-slate-500 font-bold">
+                Baseline (Year 1):
               </label>
               <select
-                value={comparisonOlderId || ''}
-                onChange={(e) => runComparison(e.target.value, comparisonNewerId || undefined)}
-                className="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                value={olderObs ? olderObs.id : ''}
+                onChange={(e) => runComparison(e.target.value, newerObs?.id)}
+                className="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-sky-500 shadow-xs font-medium cursor-pointer"
               >
                 {observations.map((obs) => (
                   <option key={obs.id} value={obs.id}>
@@ -199,16 +357,16 @@ export const ComparisonStudioModal: React.FC = () => {
               </select>
             </div>
 
-            <span className="text-slate-400 mt-5 font-bold">vs</span>
+            <span className="text-slate-400 font-bold">vs</span>
 
-            <div>
-              <label className="text-[10px] font-mono uppercase text-slate-500 font-bold block mb-1">
-                Comparison (Year 2)
+            <div className="flex items-center space-x-2">
+              <label className="text-[10px] font-mono uppercase text-slate-500 font-bold">
+                Comparison (Year 2):
               </label>
               <select
-                value={comparisonNewerId || ''}
-                onChange={(e) => runComparison(comparisonOlderId || undefined, e.target.value)}
-                className="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500 shadow-sm font-medium"
+                value={newerObs ? newerObs.id : ''}
+                onChange={(e) => runComparison(olderObs?.id, e.target.value)}
+                className="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-sky-500 shadow-xs font-medium cursor-pointer"
               >
                 {observations.map((obs) => (
                   <option key={obs.id} value={obs.id}>
@@ -216,6 +374,30 @@ export const ComparisonStudioModal: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Quick Benchmark Presets */}
+            <div className="hidden xl:flex items-center space-x-1 pl-2 border-l border-slate-300 text-[11px]">
+              <span className="text-[10px] font-mono text-slate-400 mr-1">Presets:</span>
+              <button
+                onClick={() => handleApplyPreset('2017', '2026')}
+                className="px-2 py-0.5 rounded bg-white hover:bg-slate-200 border border-slate-300 font-mono text-slate-700 transition-colors"
+                title="Max Multi-Temporal Span: 2017 vs 2026"
+              >
+                2017 vs 2026
+              </button>
+              <button
+                onClick={() => handleApplyPreset('2017', '2024')}
+                className="px-2 py-0.5 rounded bg-white hover:bg-slate-200 border border-slate-300 font-mono text-slate-700 transition-colors"
+              >
+                2017 vs 2024
+              </button>
+              <button
+                onClick={() => handleApplyPreset('2021', '2026')}
+                className="px-2 py-0.5 rounded bg-white hover:bg-slate-200 border border-slate-300 font-mono text-slate-700 transition-colors"
+              >
+                2021 vs 2026
+              </button>
             </div>
           </div>
 
@@ -226,243 +408,360 @@ export const ComparisonStudioModal: React.FC = () => {
                 setActiveScreen('command-center');
                 setIsSwipeMode(true);
               }}
-              className="flex items-center space-x-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-3 py-2 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+              className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              title="Switch to full-screen 3D geospatial curtain swipe"
             >
               <Maximize2 className="w-3.5 h-3.5 text-sky-600" />
-              <span>Full-Screen Curtain Swipe</span>
+              <span>Full-Screen In-Map 3D Swipe</span>
             </button>
             <button
               onClick={() => setIsReportModalOpen(true)}
-              className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-md shadow-sky-600/20 transition-all"
+              className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm shadow-sky-600/20 transition-all"
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Civic Compliance Report</span>
+              <span>Audit Report</span>
             </button>
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-5 overflow-y-auto space-y-5">
-          {/* Side-by-Side High-Definition Image Inspection Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Year 1 Card (Baseline Pristine View) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm hover:border-slate-300 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
-                  <span className="font-bold text-sm text-slate-900">
-                    {oldYear} Baseline Satellite Image
+        {/* Main Content Area */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+          {viewMode === 'dual' ? (
+            /* Mode 1: Dual Photographic Side-by-Side Cards */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Year 1 Card (Baseline Pristine View) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
+                    <span className="font-bold text-sm text-slate-900">
+                      {oldYear} Baseline Satellite Image
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-sky-800 bg-sky-100 px-2 py-0.5 rounded-md font-semibold border border-sky-200">
+                    {olderObs?.observation_date}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-sky-700 bg-sky-100 px-2 py-0.5 rounded font-semibold border border-sky-200">
-                  {olderObs?.observation_date}
-                </span>
-              </div>
 
-              {/* High-Definition Satellite Canvas */}
-              <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
-                <img
-                  src={highResSatelliteUrl}
-                  alt={`${selectedLake.official_name} ${oldYear}`}
-                  className="w-full h-full object-cover transition-transform duration-200"
-                  style={{ transform: `scale(${oldZoom})` }}
-                  loading="eager"
-                />
-
-                {/* Pristine Full Lake Water Polygon Overlay */}
-                {showOldMask && oldWaterPath && (
-                  <svg
-                    viewBox="0 0 1024 640"
-                    preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-150"
+                {/* Satellite Imagery Frame with Pristine Water Mask */}
+                <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
+                  <img
+                    src={highResSatelliteUrl}
+                    alt={`${selectedLake.official_name} ${oldYear}`}
+                    className="w-full h-full object-cover transition-transform duration-200"
                     style={{
-                      opacity: maskOpacity,
                       transform: `scale(${oldZoom})`,
-                      transformOrigin: 'center center'
+                      filter: 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)'
                     }}
-                  >
-                    <path
-                      d={oldWaterPath}
-                      fill="rgba(2, 132, 199, 0.55)"
-                      stroke="#0284C7"
-                      strokeWidth="3"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
+                    loading="eager"
+                  />
 
-                {/* Badge Overlay */}
-                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
-                  <span className="text-[10px] font-mono text-slate-900 bg-white/95 backdrop-blur-md border border-slate-200 px-2.5 py-0.5 rounded-full font-bold shadow-md">
-                    🛰️ {oldYear} Pristine Baseline
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
-                    ✓ Full Water Extent
-                  </span>
+                  {/* Full Historical Water Polygon (Blue Specular Wash) */}
+                  {showOldMask && oldWaterPath && (
+                    <svg
+                      viewBox="0 0 1024 640"
+                      preserveAspectRatio="none"
+                      className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-150"
+                      style={{
+                        opacity: maskOpacity,
+                        transform: `scale(${oldZoom})`,
+                        transformOrigin: 'center center'
+                      }}
+                    >
+                      <path
+                        d={oldWaterPath}
+                        fill="rgba(2, 132, 199, 0.55)"
+                        stroke="#0284C7"
+                        strokeWidth="3.5"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+
+                  {/* Badges */}
+                  <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
+                    <span className="text-[10px] font-mono text-slate-900 bg-white/95 backdrop-blur-md border border-slate-200 px-2.5 py-0.5 rounded-full font-bold shadow-md">
+                      🛰️ {oldYear} Pristine Baseline
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                      ✓ Full Water Extent
+                    </span>
+                  </div>
+
+                  {/* Bottom Controls Bar */}
+                  <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs shadow-md">
+                    <button
+                      onClick={() => setShowOldMask(!showOldMask)}
+                      className={`px-2.5 py-1 rounded font-mono font-semibold flex items-center space-x-1.5 transition-colors ${
+                        showOldMask ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {showOldMask ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      <span>{showOldMask ? 'Water Mask (On)' : 'Pure Aerial Photo'}</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-[10px] text-slate-500 font-mono">Zoom:</span>
+                      <button
+                        onClick={() => setOldZoom(oldZoom === 1 ? 1.5 : oldZoom === 1.5 ? 2 : 1)}
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-bold"
+                      >
+                        {oldZoom}x
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Bottom Controls Bar */}
-                <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs shadow-md">
-                  <button
-                    onClick={() => setShowOldMask(!showOldMask)}
-                    className={`px-2.5 py-1 rounded font-mono font-semibold flex items-center space-x-1.5 transition-colors ${
-                      showOldMask ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {showOldMask ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>{showOldMask ? 'Water Mask (On)' : 'Pure Photo'}</span>
-                  </button>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-[10px] text-slate-500 font-mono">Zoom:</span>
-                    <button
-                      onClick={() => setOldZoom(oldZoom === 1 ? 1.5 : oldZoom === 1.5 ? 2 : 1)}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-bold"
-                    >
-                      {oldZoom}x
-                    </button>
+                {/* Data Readout */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Water Surface</span>
+                    <span className="font-mono font-bold text-slate-900 text-sm">
+                      {comparisonData
+                        ? comparisonData.area_old_hectares.toFixed(1)
+                        : olderObs?.detected_area_hectares?.toFixed(1) || selectedLake.area_hectares.toFixed(1)}{' '}
+                      ha
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Observation Sensor</span>
+                    <span className="text-slate-700 text-xs font-mono truncate block">
+                      Sentinel-2 MSI Level-2A (10m)
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Data readouts */}
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold block">Water Surface</span>
-                  <span className="font-mono font-bold text-slate-900 text-sm">
-                    {comparisonData ? comparisonData.area_old_hectares.toFixed(1) : olderObs?.detected_area_hectares} ha
+              {/* Year 2 Card (Contemporary View with Red Encroachment Highlight) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
+                    <span className="font-bold text-sm text-slate-900">
+                      {newYear} Contemporary Satellite Image
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-red-800 bg-red-100 px-2 py-0.5 rounded-md font-semibold border border-red-200">
+                    {newerObs?.observation_date}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold block">Observation Pass</span>
-                  <span className="text-slate-700 text-xs font-mono truncate block">
-                    Sentinel-2 MSI Level-2A
-                  </span>
+
+                {/* Satellite Imagery Frame with Contracted Water & Red Encroached Settlement Highlight */}
+                <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
+                  <img
+                    src={highResSatelliteUrl}
+                    alt={`${selectedLake.official_name} ${newYear}`}
+                    className="w-full h-full object-cover transition-transform duration-200"
+                    style={{
+                      transform: `scale(${newZoom})`,
+                      filter: 'contrast(1.15) saturate(1.15) brightness(1.02)'
+                    }}
+                    loading="eager"
+                  />
+
+                  {/* Water Polygon & Lost Water Hatch */}
+                  {showNewMask && (
+                    <svg
+                      viewBox="0 0 1024 640"
+                      preserveAspectRatio="none"
+                      className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-150"
+                      style={{
+                        opacity: maskOpacity,
+                        transform: `scale(${newZoom})`,
+                        transformOrigin: 'center center'
+                      }}
+                    >
+                      {/* Remaining Active Water (Blue) */}
+                      {newWaterPath && (
+                        <path
+                          d={newWaterPath}
+                          fill="rgba(2, 132, 199, 0.52)"
+                          stroke="#0284C7"
+                          strokeWidth="2.5"
+                          strokeLinejoin="round"
+                        />
+                      )}
+
+                      {/* Encroached Human Settlement / Built-Up Area (High-Contrast Red) */}
+                      {lostWaterPath && (
+                        <path
+                          d={lostWaterPath}
+                          fill="rgba(220, 38, 38, 0.62)"
+                          stroke="#DC2626"
+                          strokeWidth="3.5"
+                          strokeDasharray="5 3"
+                          strokeLinejoin="round"
+                        />
+                      )}
+                    </svg>
+                  )}
+
+                  {/* Badges */}
+                  <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
+                    <span className="text-[10px] font-mono text-slate-900 bg-white/95 backdrop-blur-md border border-slate-200 px-2.5 py-0.5 rounded-full font-bold shadow-md">
+                      🛰️ {newYear} Contemporary View
+                    </span>
+                    {isShrinking ? (
+                      <span className="text-[10px] font-mono text-red-800 bg-red-100/95 border border-red-300 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1">
+                        <AlertTriangle className="w-3 h-3 text-red-600" />
+                        <span>Shrinkage Flagged</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                        ✓ Boundary Stable
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom Controls Bar */}
+                  <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs shadow-md">
+                    <button
+                      onClick={() => setShowNewMask(!showNewMask)}
+                      className={`px-2.5 py-1 rounded font-mono font-semibold flex items-center space-x-1.5 transition-colors ${
+                        showNewMask ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {showNewMask ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      <span>{showNewMask ? 'Encroachment Highlight' : 'Pure Aerial Photo'}</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-[10px] text-slate-500 font-mono">Zoom:</span>
+                      <button
+                        onClick={() => setNewZoom(newZoom === 1 ? 1.5 : newZoom === 1.5 ? 2 : 1)}
+                        className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-bold"
+                      >
+                        {newZoom}x
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Readout */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Water Surface</span>
+                    <span className="font-mono font-bold text-sky-700 text-sm">
+                      {comparisonData
+                        ? comparisonData.area_new_hectares.toFixed(1)
+                        : newerObs?.detected_area_hectares?.toFixed(1) || '0.0'}{' '}
+                      ha
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold block">Net Surface Change</span>
+                    <span
+                      className={`font-mono font-bold text-sm ${
+                        comparisonData?.is_gain ? 'text-emerald-600' : 'text-red-600'
+                      }`}
+                    >
+                      {comparisonData
+                        ? `${comparisonData.area_change_hectares > 0 ? '+' : ''}${comparisonData.area_change_hectares.toFixed(1)} ha (${comparisonData.change_percentage.toFixed(1)}%)`
+                        : 'Computing...'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Year 2 Card (Contemporary Encroached View) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm hover:border-slate-300 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-                  <span className="font-bold text-sm text-slate-900">
-                    {newYear} Contemporary Satellite Image
-                  </span>
+          ) : (
+            /* Mode 2: In-Modal Interactive Split-Screen Curtain Swipe */
+            <div className="space-y-2">
+              <div
+                ref={curtainBoxRef}
+                className="relative h-80 md:h-96 rounded-2xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-md cursor-ew-resize"
+                onMouseDown={(e) => {
+                  setIsCurtainDragging(true);
+                  handleCurtainMove(e.clientX);
+                }}
+              >
+                {/* Layer A: Before (2017 Baseline Pristine) */}
+                <div
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ clipPath: `inset(0 ${100 - curtainPos}% 0 0)` }}
+                >
+                  <img
+                    src={highResSatelliteUrl}
+                    alt="Baseline 2017"
+                    className="w-full h-full object-cover"
+                    style={{ filter: 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)' }}
+                  />
+                  {oldWaterPath && (
+                    <svg
+                      viewBox="0 0 1024 640"
+                      preserveAspectRatio="none"
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                    >
+                      <path
+                        d={oldWaterPath}
+                        fill="rgba(2, 132, 199, 0.58)"
+                        stroke="#0284C7"
+                        strokeWidth="3.5"
+                      />
+                    </svg>
+                  )}
+                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full border border-slate-200 text-xs font-mono font-bold text-slate-900 shadow-md">
+                    🛰️ {oldYear} Pristine Baseline ({comparisonData ? comparisonData.area_old_hectares.toFixed(1) : olderObs?.detected_area_hectares} ha)
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono text-red-700 bg-red-100 px-2 py-0.5 rounded font-semibold border border-red-200">
-                  {newerObs?.observation_date}
-                </span>
-              </div>
 
-              {/* High-Definition Satellite Canvas */}
-              <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
-                <img
-                  src={highResSatelliteUrl}
-                  alt={`${selectedLake.official_name} ${newYear}`}
-                  className="w-full h-full object-cover transition-transform duration-200"
-                  style={{ transform: `scale(${newZoom})` }}
-                  loading="eager"
-                />
-
-                {/* Contemporary Water + Red Encroachment Highlight */}
-                {showNewMask && (
+                {/* Layer B: After (2026 Contemporary Encroachment) */}
+                <div
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ clipPath: `inset(0 0 0 ${curtainPos}%)` }}
+                >
+                  <img
+                    src={highResSatelliteUrl}
+                    alt="Contemporary 2026"
+                    className="w-full h-full object-cover"
+                    style={{ filter: 'contrast(1.15) saturate(1.15) brightness(1.02)' }}
+                  />
                   <svg
                     viewBox="0 0 1024 640"
                     preserveAspectRatio="none"
-                    className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-150"
-                    style={{
-                      opacity: maskOpacity,
-                      transform: `scale(${newZoom})`,
-                      transformOrigin: 'center center'
-                    }}
+                    className="absolute inset-0 w-full h-full pointer-events-none"
                   >
-                    {/* Remaining Active Water (Blue) */}
                     {newWaterPath && (
                       <path
                         d={newWaterPath}
                         fill="rgba(2, 132, 199, 0.5)"
                         stroke="#0284C7"
                         strokeWidth="2.5"
-                        strokeLinejoin="round"
                       />
                     )}
-
-                    {/* Encroached Human Settlement Zone (Red) */}
                     {lostWaterPath && (
                       <path
                         d={lostWaterPath}
-                        fill="rgba(220, 38, 38, 0.58)"
+                        fill="rgba(220, 38, 38, 0.65)"
                         stroke="#DC2626"
-                        strokeWidth="3"
-                        strokeDasharray="4 2"
-                        strokeLinejoin="round"
+                        strokeWidth="3.5"
+                        strokeDasharray="5 3"
                       />
                     )}
                   </svg>
-                )}
-
-                {/* Badge Overlay */}
-                <div className="absolute top-2.5 left-2.5 flex items-center space-x-1.5 pointer-events-none">
-                  <span className="text-[10px] font-mono text-slate-900 bg-white/95 backdrop-blur-md border border-slate-200 px-2.5 py-0.5 rounded-full font-bold shadow-md">
-                    🛰️ {newYear} Contemporary View
-                  </span>
-                  {isShrinking ? (
-                    <span className="text-[10px] font-mono text-red-800 bg-red-100/95 border border-red-300 px-2 py-0.5 rounded-full font-bold flex items-center space-x-1">
-                      <AlertTriangle className="w-3 h-3 text-red-600" />
-                      <span>Shrinkage Flagged</span>
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">
-                      ✓ Boundary Stable
-                    </span>
-                  )}
-                </div>
-
-                {/* Bottom Controls Bar */}
-                <div className="absolute bottom-2 inset-x-2 flex items-center justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs shadow-md">
-                  <button
-                    onClick={() => setShowNewMask(!showNewMask)}
-                    className={`px-2.5 py-1 rounded font-mono font-semibold flex items-center space-x-1.5 transition-colors ${
-                      showNewMask ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {showNewMask ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                    <span>{showNewMask ? 'Encroachment Highlight' : 'Pure Photo'}</span>
-                  </button>
-
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-[10px] text-slate-500 font-mono">Zoom:</span>
-                    <button
-                      onClick={() => setNewZoom(newZoom === 1 ? 1.5 : newZoom === 1.5 ? 2 : 1)}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-bold"
-                    >
-                      {newZoom}x
-                    </button>
+                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full border border-slate-200 text-xs font-mono font-bold text-red-700 shadow-md">
+                    🛰️ {newYear} Contemporary View ({comparisonData ? comparisonData.area_new_hectares.toFixed(1) : newerObs?.detected_area_hectares} ha)
                   </div>
                 </div>
-              </div>
 
-              {/* Data readouts */}
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold block">Water Surface</span>
-                  <span className="font-mono font-bold text-sky-700 text-sm">
-                    {comparisonData ? comparisonData.area_new_hectares.toFixed(1) : newerObs?.detected_area_hectares} ha
-                  </span>
+                {/* Draggable Divider Line & Knob */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-white shadow-2xl pointer-events-none"
+                  style={{ left: `${curtainPos}%` }}
+                >
+                  <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white border-2 border-sky-600 shadow-xl flex items-center justify-center text-sky-700">
+                    <SplitSquareVertical className="w-4 h-4" />
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold block">Net Change</span>
-                  <span className={`font-mono font-bold text-sm ${comparisonData?.is_gain ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {comparisonData ? `${comparisonData.area_change_hectares.toFixed(1)} ha (${comparisonData.change_percentage.toFixed(1)}%)` : '0 ha'}
-                  </span>
+
+                {/* Hint Bar */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-mono text-white/90 shadow-md pointer-events-none">
+                  Drag slider horizontally to reveal multi-temporal changes ({curtainPos.toFixed(0)}%)
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Metric Highlights in Light Theme */}
+          {/* Metric Highlights & Civic Audit Verdict */}
           {comparisonData && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
@@ -470,7 +769,8 @@ export const ComparisonStudioModal: React.FC = () => {
                   Historical Extent ({comparisonData.older_date})
                 </span>
                 <div className="text-xl font-bold font-mono text-slate-900 mt-1">
-                  {comparisonData.area_old_hectares.toFixed(1)} <span className="text-xs text-slate-500 font-normal">ha</span>
+                  {comparisonData.area_old_hectares.toFixed(1)}{' '}
+                  <span className="text-xs text-slate-500 font-normal">ha</span>
                 </div>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Baseline measurement</span>
               </div>
@@ -480,7 +780,8 @@ export const ComparisonStudioModal: React.FC = () => {
                   Recent Extent ({comparisonData.newer_date})
                 </span>
                 <div className="text-xl font-bold font-mono text-sky-700 mt-1">
-                  {comparisonData.area_new_hectares.toFixed(1)} <span className="text-xs text-slate-500 font-normal">ha</span>
+                  {comparisonData.area_new_hectares.toFixed(1)}{' '}
+                  <span className="text-xs text-slate-500 font-normal">ha</span>
                 </div>
                 <span className="text-[11px] text-slate-500 mt-0.5 block">Contemporary water spread</span>
               </div>
@@ -489,8 +790,14 @@ export const ComparisonStudioModal: React.FC = () => {
                 <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">
                   Net Delta (ΔA)
                 </span>
-                <div className={`text-xl font-bold font-mono mt-1 ${comparisonData.is_gain ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {comparisonData.area_change_hectares > 0 ? '+' : ''}{comparisonData.area_change_hectares.toFixed(1)} <span className="text-xs font-normal">ha</span>
+                <div
+                  className={`text-xl font-bold font-mono mt-1 ${
+                    comparisonData.is_gain ? 'text-emerald-600' : 'text-red-600'
+                  }`}
+                >
+                  {comparisonData.area_change_hectares > 0 ? '+' : ''}
+                  {comparisonData.area_change_hectares.toFixed(1)}{' '}
+                  <span className="text-xs font-normal">ha</span>
                 </div>
                 <span className="text-[11px] text-slate-500 mt-0.5 block font-mono">
                   {comparisonData.change_percentage.toFixed(1)}% {comparisonData.is_gain ? 'gain' : 'loss'}
@@ -502,16 +809,20 @@ export const ComparisonStudioModal: React.FC = () => {
                   Civic Audit Status
                 </span>
                 <div className="mt-1">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase ${
-                    comparisonData.is_gain
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      : 'bg-red-100 text-red-800 border border-red-200'
-                  }`}>
+                  <span
+                    className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-mono font-bold uppercase ${
+                      comparisonData.is_gain
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                    }`}
+                  >
                     {comparisonData.change_classification}
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  {comparisonData.seasonal_context?.is_same_season_comparison ? 'Consistent seasonal window' : 'Seasonal gap detected'}
+                  {comparisonData.seasonal_context?.is_same_season_comparison
+                    ? 'Consistent seasonal dry-season window'
+                    : 'Inter-seasonal baseline comparison'}
                 </span>
               </div>
             </div>

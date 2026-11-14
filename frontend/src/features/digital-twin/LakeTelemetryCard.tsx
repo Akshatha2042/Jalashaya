@@ -32,7 +32,8 @@ export const LakeTelemetryCard: React.FC = () => {
     isTelemetryOpen,
     setIsTelemetryOpen,
     satelliteProvider,
-    setSatelliteProvider
+    setSatelliteProvider,
+    runComparison
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'layers'>('metrics');
@@ -373,10 +374,19 @@ export const LakeTelemetryCard: React.FC = () => {
             {/* Quick Action Footer Buttons */}
             <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-xs">
               <button
-                onClick={() => setActiveScreen('comparison-studio')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-semibold transition-colors"
+                onClick={() => {
+                  if (observations.length >= 2) {
+                    const older = observations[0].id;
+                    const newer = observations[observations.length - 1].id;
+                    runComparison(older, newer);
+                  }
+                  setActiveScreen('comparison-studio');
+                }}
+                className="py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-center font-semibold transition-colors flex items-center justify-center space-x-1"
+                title="Open Side-by-Side Satellite Comparison Studio"
               >
-                Side-by-Side
+                <Sliders className="w-3 h-3" />
+                <span>Comparison</span>
               </button>
               <button
                 onClick={() => setActiveScreen('restoration-lab')}

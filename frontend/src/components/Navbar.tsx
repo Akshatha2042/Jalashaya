@@ -19,8 +19,27 @@ export const Navbar: React.FC = () => {
     selectedLake,
     resetCameraToBengaluru,
     setIsReportModalOpen,
-    lakes
+    lakes,
+    fetchLakes,
+    selectLake
   } = useAppStore();
+
+  const handleNavClick = async (screen: AppScreen) => {
+    if (screen === 'comparison-studio' || screen === 'restoration-lab') {
+      if (!selectedLake) {
+        let currentLakes = lakes;
+        if (currentLakes.length === 0) {
+          await fetchLakes();
+          currentLakes = useAppStore.getState().lakes;
+        }
+        const bellandur = currentLakes.find((l) => l.id === 'lake-bellandur') || currentLakes[0];
+        if (bellandur) {
+          await selectLake(bellandur.id);
+        }
+      }
+    }
+    setActiveScreen(screen);
+  };
 
   const navItems: { screen: AppScreen; label: string; icon: React.ReactNode }[] = [
     { screen: 'landing', label: 'Home', icon: <Home className="w-3.5 h-3.5" /> },
@@ -77,7 +96,7 @@ export const Navbar: React.FC = () => {
           return (
             <button
               key={item.screen}
-              onClick={() => setActiveScreen(item.screen)}
+              onClick={() => handleNavClick(item.screen)}
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isActive
                   ? 'bg-sky-600 text-white shadow-sm'

@@ -18,7 +18,7 @@ import {
 import { useAppStore } from '../../stores/useAppStore';
 
 export const LandingPage: React.FC = () => {
-  const { setActiveScreen, selectLake, lakes, selectedLake } = useAppStore();
+  const { setActiveScreen, selectLake, fetchLakes, lakes, selectedLake } = useAppStore();
 
   const handleLaunchMap = (lakeName?: string) => {
     setActiveScreen('command-center');
@@ -33,10 +33,18 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const handleLaunchComparison = () => {
-    if (!selectedLake && lakes.length > 0) {
-      const match = lakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) || lakes[0];
-      selectLake(match.id);
+  const handleLaunchComparison = async () => {
+    let currentLakes = lakes;
+    if (currentLakes.length === 0) {
+      await fetchLakes();
+      currentLakes = useAppStore.getState().lakes;
+    }
+    const match =
+      (selectedLake ? currentLakes.find((l) => l.id === selectedLake.id) : null) ||
+      currentLakes.find((l) => l.official_name.toLowerCase().includes('bellandur')) ||
+      currentLakes[0];
+    if (match) {
+      await selectLake(match.id);
     }
     setActiveScreen('comparison-studio');
   };
@@ -79,6 +87,7 @@ export const LandingPage: React.FC = () => {
             <a href="#audit" onClick={scrollToSection('audit')} className="hover:text-sky-600 transition-colors">Civic Audit</a>
             <a href="#features" onClick={scrollToSection('features')} className="hover:text-sky-600 transition-colors">Core Features</a>
             <a href="#flagship" onClick={scrollToSection('flagship')} className="hover:text-sky-600 transition-colors">Flagship Lakes</a>
+            <button onClick={handleLaunchComparison} className="hover:text-sky-600 transition-colors font-medium">Comparison</button>
             <a href="#simulation" onClick={scrollToSection('simulation')} className="hover:text-sky-600 transition-colors">Restoration Lab</a>
             <button onClick={() => setActiveScreen('methodology')} className="hover:text-sky-600 transition-colors font-medium">Methodology</button>
           </nav>
@@ -413,6 +422,12 @@ export const LandingPage: React.FC = () => {
         <a href="#flagship" onClick={scrollToSection('flagship')} className="hover:text-sky-600 transition-colors">
           Flagship
         </a>
+        <button
+          onClick={handleLaunchComparison}
+          className="hover:text-sky-600 transition-colors text-slate-700 font-medium"
+        >
+          Comparison
+        </button>
         <span className="text-slate-300">|</span>
         <button
           onClick={() => handleLaunchMap()}
