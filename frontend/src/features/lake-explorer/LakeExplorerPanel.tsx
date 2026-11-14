@@ -53,154 +53,158 @@ export const LakeExplorerPanel: React.FC = () => {
   const selectedLakeObj = lakes.find((l) => l.id === selectedLakeId);
 
   return (
-    <aside className="absolute top-[62px] left-4 z-30 pointer-events-auto">
+    <aside className="absolute top-[62px] left-44 z-30 pointer-events-auto">
       {/* 1. Collapsed Floating Search Pill */}
       {!isExplorerOpen ? (
         <button
           onClick={() => setIsExplorerOpen(true)}
-          className="flex items-center space-x-2.5 bg-[#101A20]/90 backdrop-blur-xl border border-white/10 hover:border-[#47D4DF]/40 px-3.5 py-2 rounded-xl shadow-2xl text-xs text-white transition-all group"
+          className="flex items-center space-x-2.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:border-sky-300 px-3.5 py-2 rounded-xl shadow-md hover:shadow-lg text-xs text-slate-800 transition-all group"
         >
-          <Search className="w-3.5 h-3.5 text-[#47D4DF] group-hover:scale-110 transition-transform" />
-          <span className="font-medium text-[#F2F5F2]">
-            {selectedLakeObj ? selectedLakeObj.official_name : 'Explore Bengaluru Lakes (185)'}
+          <Search className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
+          <span className="font-semibold text-slate-900">
+            {selectedLakeObj ? selectedLakeObj.official_name : 'Explore Lakes (185)'}
           </span>
-          <span className="text-[10px] font-mono bg-white/10 text-[#8D9A9A] px-1.5 py-0.5 rounded">
+          <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold border border-slate-200">
             {lakes.length}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-[#8D9A9A]" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
         </button>
       ) : (
-        /* 2. Expanded Clean Floating Drawer */
-        <div className="w-88 bg-[#101A20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
+        /* 2. Expanded Clean Floating Drawer in Light Mode */
+        <div className="w-88 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-3 border-b border-white/10 flex items-center justify-between">
+          <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
             <div className="flex items-center space-x-2">
-              <Droplet className="w-3.5 h-3.5 text-[#47D4DF]" />
-              <span className="text-xs font-semibold tracking-wider text-white uppercase">
-                Bengaluru Civic Lake Audit
+              <Droplet className="w-3.5 h-3.5 text-sky-600" />
+              <span className="text-xs font-bold tracking-tight text-slate-900 uppercase">
+                Bengaluru Civic Lake Census
               </span>
-              <span className="text-[10px] font-mono bg-white/10 text-[#8D9A9A] px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-mono bg-slate-200/70 text-slate-700 px-1.5 py-0.5 rounded font-bold">
                 {filteredLakes.length} / {lakes.length}
               </span>
             </div>
             <button
               onClick={() => setIsExplorerOpen(false)}
-              className="text-[#8D9A9A] hover:text-white p-1 rounded-md hover:bg-white/5 transition-colors"
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200/60 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Encroachment Audit Status Tabs */}
-          <div className="grid grid-cols-3 p-1.5 bg-[#142D3B]/40 border-b border-white/10 text-[10.5px]">
+          <div className="grid grid-cols-3 p-1.5 bg-slate-100/70 border-b border-slate-200 text-xs gap-1 font-semibold">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`py-1 rounded-md font-medium transition-colors ${
+              className={`py-1 rounded-md transition-colors ${
                 statusFilter === 'ALL'
-                  ? 'bg-white/15 text-white shadow-sm'
-                  : 'text-[#8D9A9A] hover:text-white'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               All ({lakes.length})
             </button>
             <button
               onClick={() => setStatusFilter('ENCROACHED')}
-              className={`py-1 rounded-md font-medium transition-colors flex items-center justify-center space-x-1 ${
+              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${
                 statusFilter === 'ENCROACHED'
-                  ? 'bg-[#EF4444]/30 text-[#F87171] border border-[#EF4444]/50'
-                  : 'text-[#F87171]/70 hover:text-[#F87171]'
+                  ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
+                  : 'text-slate-500 hover:text-red-600'
               }`}
             >
-              <AlertTriangle className="w-3 h-3" />
+              <AlertTriangle className="w-3 h-3 text-red-500" />
               <span>Encroached ({encroachedCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter('FREE')}
-              className={`py-1 rounded-md font-medium transition-colors flex items-center justify-center space-x-1 ${
+              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${
                 statusFilter === 'FREE'
-                  ? 'bg-[#10B981]/30 text-[#34D399] border border-[#10B981]/50'
-                  : 'text-[#34D399]/70 hover:text-[#34D399]'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm'
+                  : 'text-slate-500 hover:text-emerald-600'
               }`}
             >
-              <CheckCircle2 className="w-3 h-3" />
+              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span>Free ({freeCount})</span>
             </button>
           </div>
 
-          {/* Search Box */}
-          <div className="p-2.5 border-b border-white/10 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-[#8D9A9A]" />
+          {/* Search Bar */}
+          <div className="p-2 border-b border-slate-100 bg-white">
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search by lake or ward name..."
+                placeholder="Search lake name or ward..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                className="w-full bg-[#142D3B]/60 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-[#8D9A9A] focus:outline-none focus:border-[#47D4DF] transition-colors"
+                className="w-full bg-slate-100 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 transition-colors"
               />
-            </div>
-
-            {/* BBMP Zone Chips */}
-            <div className="flex items-center space-x-1 overflow-x-auto pb-1 scrollbar-none text-[10px]">
-              {zones.map((z) => (
+              {searchQuery && (
                 <button
-                  key={z}
-                  onClick={() => setSelectedZone(z === 'ALL' ? null : z)}
-                  className={`px-2 py-0.5 rounded-md whitespace-nowrap transition-colors ${
-                    (selectedZone === z || (!selectedZone && z === 'ALL'))
-                      ? 'bg-[#168CC5] text-white font-medium'
-                      : 'bg-white/5 text-[#8D9A9A] hover:text-white'
-                  }`}
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 text-slate-400 hover:text-slate-600 text-xs"
                 >
-                  {z}
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
+          {/* Zone Chips Horizontal Scroll */}
+          <div className="px-2 py-1.5 border-b border-slate-100 flex items-center space-x-1 overflow-x-auto text-[10px] bg-slate-50/50">
+            {zones.map((zone) => {
+              const isSelected = (selectedZone === zone) || (zone === 'ALL' && !selectedZone);
+              return (
+                <button
+                  key={zone}
+                  onClick={() => setSelectedZone(zone === 'ALL' ? null : zone)}
+                  className={`px-2 py-0.5 rounded-full whitespace-nowrap font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-sky-600 text-white font-bold'
+                      : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
+                  }`}
+                >
+                  {zone}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Lake List */}
-          <div className="overflow-y-auto divide-y divide-white/5 flex-1 max-h-[52vh]">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 text-xs">
             {filteredLakes.map((lake) => {
-              const isSelected = selectedLakeId === lake.id;
+              const isSelected = lake.id === selectedLakeId;
               const isEnc = (lake.encroachment_status || '').toLowerCase().includes('encroached');
-              const encHa = lake.encroached_area_hectares || 0;
 
               return (
                 <div
                   key={lake.id}
                   onClick={() => {
                     selectLake(lake.id);
-                    setIsExplorerOpen(false); // Close drawer to focus on the map
+                    setIsExplorerOpen(false);
                   }}
-                  className={`p-2.5 cursor-pointer transition-colors hover:bg-white/5 flex items-center justify-between ${
-                    isSelected ? 'bg-[#168CC5]/20 border-l-2 border-[#47D4DF]' : ''
+                  className={`p-2.5 hover:bg-sky-50/60 cursor-pointer transition-colors flex items-center justify-between ${
+                    isSelected ? 'bg-sky-50 border-l-4 border-sky-600' : ''
                   }`}
                 >
-                  <div className="pr-2 min-w-0">
-                    <h4 className="text-xs font-semibold text-white tracking-tight truncate">
-                      {lake.official_name}
-                    </h4>
-                    <div className="flex items-center space-x-1.5 text-[10px] text-[#8D9A9A] mt-0.5">
-                      <span>{lake.administrative_zone || 'Bengaluru'}</span>
-                      <span>•</span>
-                      <span className="font-mono text-white/80">{lake.area_hectares} ha</span>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-semibold text-slate-900">{lake.official_name}</span>
+                      {isEnc ? (
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-red-50 text-red-700 border border-red-200 font-bold">
+                          Encroached
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                          Restored
+                        </span>
+                      )}
                     </div>
+                    <p className="text-[10px] text-slate-500 font-mono">
+                      {lake.administrative_zone || 'Bengaluru'} • {lake.area_hectares.toFixed(1)} ha
+                    </p>
                   </div>
 
-                  <div className="shrink-0">
-                    {isEnc ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold bg-[#EF4444]/20 text-[#F87171] border border-[#EF4444]/30">
-                        <span>⚠️</span>
-                        <span>{encHa > 0 ? `${encHa.toFixed(1)} ha` : 'Encroached'}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold bg-[#10B981]/20 text-[#34D399] border border-[#10B981]/30">
-                        <span>✓</span>
-                        <span>Intrusion-Free</span>
-                      </span>
-                    )}
-                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
                 </div>
               );
             })}

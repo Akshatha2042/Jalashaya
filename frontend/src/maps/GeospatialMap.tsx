@@ -326,22 +326,22 @@ export const GeospatialMap: React.FC = () => {
           const p = e.features[0].properties;
           const isEnc = p?.isEncroached;
           const statusBadge = isEnc
-            ? `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:4px;background:rgba(239,68,68,0.25);color:#F87171;font-size:10px;font-weight:700;border:1px solid rgba(239,68,68,0.5);">
+            ? `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#fef2f2;color:#b91c1c;font-size:10px;font-weight:700;border:1px solid #fecaca;">
                 <span>⚠️ ${p?.status || 'Encroached'}</span>
                 <span>(${p?.encroached_area} ha lost)</span>
                </div>`
-            : `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:4px;background:rgba(16,185,129,0.25);color:#34D399;font-size:10px;font-weight:700;border:1px solid rgba(16,185,129,0.5);">
+            : `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#ecfdf5;color:#047857;font-size:10px;font-weight:700;border:1px solid #a7f3d0;">
                 <span>✓ ${p?.status || 'Free of Intrusion (Restored)'}</span>
                </div>`;
 
           hoverPopup
             .setLngLat(e.lngLat)
             .setHTML(`
-              <div style="background:#101A20;color:#fff;padding:8px 12px;border-radius:8px;font-size:11px;border:1px solid rgba(255,255,255,0.15);box-shadow:0 8px 24px rgba(0,0,0,0.6);font-family:sans-serif;min-width:180px;">
-                <div style="font-weight:700;font-size:12px;color:#F2F5F2;margin-bottom:2px;">${p?.name}</div>
-                <div style="color:#8D9A9A;font-size:10px;margin-bottom:6px;">Zone: ${p?.zone || 'Bengaluru'} • Basin: ${p?.area} ha</div>
+              <div style="background:#ffffff;color:#0f172a;padding:8px 12px;border-radius:10px;font-size:11px;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-family:sans-serif;min-width:180px;">
+                <div style="font-weight:700;font-size:12px;color:#0f172a;margin-bottom:2px;">${p?.name}</div>
+                <div style="color:#64748b;font-size:10px;margin-bottom:6px;">Zone: ${p?.zone || 'Bengaluru'} • Basin: ${p?.area} ha</div>
                 ${statusBadge}
-                <div style="margin-top:6px;font-size:9.5px;color:#6B7280;">Click to zoom & inspect multi-temporal change</div>
+                <div style="margin-top:6px;font-size:9.5px;color:#94a3b8;">Click to zoom & inspect multi-temporal change</div>
               </div>
             `)
             .addTo(map);
@@ -364,11 +364,11 @@ export const GeospatialMap: React.FC = () => {
         new maplibregl.Popup({ closeButton: true, className: 'encroachment-popup' })
           .setLngLat(e.lngLat)
           .setHTML(`
-            <div style="background:#101A20;color:#fff;padding:10px 12px;border-radius:8px;font-size:11px;border:1px solid rgba(239,68,68,0.6);box-shadow:0 8px 30px rgba(0,0,0,0.6);font-family:sans-serif;max-width:260px;">
-              <div style="font-weight:bold;color:#F87171;margin-bottom:4px;display:flex;align-items:center;gap:6px;font-size:12px;">
+            <div style="background:#ffffff;color:#0f172a;padding:10px 12px;border-radius:10px;font-size:11px;border:1px solid #fecaca;box-shadow:0 8px 30px rgba(0,0,0,0.15);font-family:sans-serif;max-width:260px;">
+              <div style="font-weight:bold;color:#b91c1c;margin-bottom:4px;display:flex;align-items:center;gap:6px;font-size:12px;">
                 <span>⚠️ Human Encroachment / Built-up Area</span>
               </div>
-              <div style="color:#E5E7EB;line-height:1.45;font-size:10.5px;">
+              <div style="color:#334155;line-height:1.45;font-size:10.5px;">
                 Verified open lake water in the 2017 baseline observation, progressively accommodated by unauthorized residential layouts, roads, and commercial developments.
               </div>
             </div>
@@ -734,58 +734,58 @@ export const GeospatialMap: React.FC = () => {
             onTouchStart={() => setIsDragging(true)}
           >
             {/* Handle Button */}
-            <div className="w-10 h-10 -ml-0.5 rounded-full bg-[#101A20] border-2 border-[#47D4DF] text-white shadow-2xl flex items-center justify-center text-xs font-mono font-bold hover:scale-110 active:scale-95 transition-transform">
+            <div className="w-9 h-9 -ml-0.5 rounded-full bg-white border-2 border-sky-600 text-sky-600 shadow-xl flex items-center justify-center text-xs font-mono font-bold hover:scale-110 active:scale-95 transition-transform">
               ↔
             </div>
           </div>
 
-          {/* Floating Screen Badges in Swipe Mode (Positioned above timeline, avoiding top controls) */}
-          <div className="absolute bottom-28 left-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#47D4DF]/50 text-white rounded-xl px-3 py-1.5 text-xs shadow-2xl flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#168CC5]" />
-            <span className="font-bold text-[#47D4DF]">2017 Baseline Satellite</span>
-            <span className="text-[10px] text-[#8D9A9A]">(Pristine Water Extent)</span>
+          {/* Floating Screen Badges in Swipe Mode */}
+          <div className="absolute bottom-28 left-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-sky-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
+            <span className="font-bold text-sky-700">2017 Baseline Satellite</span>
+            <span className="text-[10px] text-slate-500 font-mono">(Pristine Water)</span>
           </div>
 
-          <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-[#101A20]/90 backdrop-blur-md border border-[#EF4444]/50 text-white rounded-xl px-3 py-1.5 text-xs shadow-2xl flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse" />
-            <span className="font-bold text-[#F87171]">2024 Current Satellite</span>
-            <span className="text-[10px] text-[#8D9A9A]">(Urban Encroachments)</span>
+          <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-red-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
+            <span className="font-bold text-red-700">2024 Current Satellite</span>
+            <span className="text-[10px] text-slate-500 font-mono">(Urban Encroachment)</span>
           </div>
         </>
       )}
 
       {/* Satellite Visual Difference Control Toolbar (Floating Below Header, Center) */}
-      <div className="absolute top-[62px] left-1/2 -translate-x-1/2 z-30 pointer-events-auto bg-[#101A20]/90 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-1.5 shadow-2xl flex items-center space-x-3 text-xs text-white">
+      <div className="absolute top-[62px] left-1/2 -translate-x-1/2 z-30 pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-xl px-3 py-1.5 shadow-md flex items-center space-x-3 text-xs text-slate-800">
         {/* Swipe Mode Toggle Button */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-medium transition-all ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all ${
             isSwipeMode
-              ? 'bg-[#47D4DF] text-[#101A20] shadow-water-glow font-bold'
-              : 'bg-white/10 text-white hover:bg-white/15'
+              ? 'bg-sky-600 text-white shadow-sm font-bold'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
           }`}
           title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2024 satellite photos"
         >
           <SplitSquareVertical className="w-3.5 h-3.5" />
-          <span>{isSwipeMode ? 'Exit Swipe' : '🛰️ Satellite Swipe (2017 vs 2024)'}</span>
+          <span>{isSwipeMode ? 'Exit Swipe' : '🛰️ Satellite Swipe Curtain'}</span>
         </button>
 
-        <span className="text-white/20">|</span>
+        <span className="text-slate-300">|</span>
 
         {/* Satellite Imagery Year Indicator */}
         <div className="flex items-center space-x-1.5 text-[11px]">
-          <Calendar className="w-3 h-3 text-[#47D4DF]" />
-          <span className="text-[#8D9A9A] hidden sm:inline">Orbit:</span>
-          <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.5 rounded text-[10px]">
+          <Calendar className="w-3 h-3 text-sky-600" />
+          <span className="text-slate-500 hidden sm:inline">Orbit:</span>
+          <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
             {isSwipeMode ? '2017 ◀ ▶ 2024' : `${currentYear} Sentinel-2`}
           </span>
         </div>
 
-        <span className="text-white/20">|</span>
+        <span className="text-slate-300">|</span>
 
         {/* Encroachment Mask Opacity Slider */}
         <div className="flex items-center space-x-1.5 text-[11px]">
-          <span className="text-[#8D9A9A] hidden sm:inline">Mask:</span>
+          <span className="text-slate-500 hidden sm:inline">Mask:</span>
           <input
             type="range"
             min="0"
@@ -793,10 +793,10 @@ export const GeospatialMap: React.FC = () => {
             step="0.05"
             value={maskOpacity}
             onChange={(e) => setMaskOpacity(parseFloat(e.target.value))}
-            className="w-16 accent-[#EF4444] cursor-pointer h-1.5"
+            className="w-16 accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded"
             title="Adjust opacity to see houses and roads beneath the red encroachment overlay"
           />
-          <span className="font-mono text-[#F87171] w-6 text-right text-[10px]">
+          <span className="font-mono text-red-600 font-bold w-6 text-right text-[10px]">
             {Math.round(maskOpacity * 100)}%
           </span>
         </div>

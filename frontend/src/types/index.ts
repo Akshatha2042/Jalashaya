@@ -100,6 +100,7 @@ export interface MapLayerState {
 }
 
 export type AppScreen =
+  | 'landing'
   | 'command-center'
   | 'lake-explorer'
   | 'comparison-studio'

@@ -4,36 +4,36 @@
 
 @layer base {
   body {
-    @apply bg-[#101A20] text-[#F2F5F2] antialiased overflow-hidden select-none;
+    @apply bg-slate-50 text-slate-900 antialiased overflow-hidden select-none;
   }
 }
 
-/* Custom fine scrollbar */
+/* Custom fine light scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(16, 26, 32, 0.5);
+  background: rgba(241, 245, 249, 0.8);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(71, 212, 223, 0.25);
+  background: rgba(148, 163, 184, 0.4);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 212, 223, 0.5);
+  background: rgba(148, 163, 184, 0.7);
 }
 
-/* Maplibre control dark theme override */
+/* MapLibre control light theme override */
 .maplibregl-ctrl-group {
-  background-color: rgba(16, 26, 32, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
 }
 
 .maplibregl-ctrl-group button {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
 }
 
 .maplibregl-ctrl-group button:last-child {
@@ -41,9 +41,9 @@
 }
 
 .maplibregl-ctrl-group button:hover {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(241, 245, 249, 0.9) !important;
 }
 
 .maplibregl-ctrl-icon {
-  filter: invert(0.85);
+  filter: none !important;
 }

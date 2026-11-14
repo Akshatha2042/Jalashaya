@@ -89,325 +89,279 @@ export const LakeTelemetryCard: React.FC = () => {
       {!isTelemetryOpen ? (
         <button
           onClick={() => setIsTelemetryOpen(true)}
-          className="flex items-center space-x-2.5 bg-[#101A20]/90 backdrop-blur-xl border border-white/10 hover:border-[#47D4DF]/40 px-3.5 py-2 rounded-xl shadow-2xl text-xs text-white transition-all group"
+          className="flex items-center space-x-2.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:border-sky-300 px-3.5 py-2 rounded-xl shadow-md hover:shadow-lg text-xs text-slate-800 transition-all group"
         >
-          <Activity className="w-3.5 h-3.5 text-[#47D4DF] group-hover:scale-110 transition-transform" />
-          <span className="font-medium text-[#F2F5F2]">{selectedLake.official_name}</span>
-          <span className="font-mono text-[#47D4DF] font-bold">
+          <Activity className="w-3.5 h-3.5 text-sky-600 group-hover:scale-110 transition-transform" />
+          <span className="font-semibold text-slate-900">{selectedLake.official_name}</span>
+          <span className="font-mono text-sky-700 font-bold">
             {detectedArea.toFixed(1)} ha
           </span>
           {isShrinkingPastThreshold && (
-            <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-ping" title="Shrinking Alert" />
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" title="Shrinking Alert" />
           )}
-          <ChevronDown className="w-3.5 h-3.5 text-[#8D9A9A]" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
         </button>
       ) : (
-        /* 2. Compact Refined Glass HUD Card */
-        <div className="w-88 bg-[#101A20]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 max-h-[82vh] overflow-y-auto">
+        /* 2. Expanded Detail Card in Clean Light Theme */
+        <div className="w-80 sm:w-96 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="flex items-start justify-between border-b border-white/10 pb-2.5">
+          <div className="p-3.5 border-b border-slate-100 flex items-start justify-between bg-slate-50/70">
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-sm font-bold text-white tracking-tight">
+                <h3 className="font-bold text-sm text-slate-900 tracking-tight">
                   {selectedLake.official_name}
                 </h3>
               </div>
-              <div className="flex items-center space-x-1.5 text-[10px] text-[#8D9A9A] mt-0.5">
-                <span>{selectedLake.administrative_zone || 'Bengaluru'}</span>
-                <span>•</span>
-                <span className="truncate max-w-[140px]">{selectedLake.custodian || 'BBMP'}</span>
-              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                {selectedLake.administrative_zone || 'Bengaluru Urban'} • {selectedLake.custodian || 'BBMP Lakes Department'}
+              </p>
             </div>
-
             <button
               onClick={() => setIsTelemetryOpen(false)}
-              className="text-[#8D9A9A] hover:text-white p-1 rounded-md hover:bg-white/5 transition-colors"
+              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Sub-tabs: Metrics vs Layers */}
-          <div className="flex items-center rounded-lg bg-white/5 p-0.5 text-[11px]">
+          {/* Sub Navigation */}
+          <div className="flex border-b border-slate-100 text-xs font-semibold bg-slate-50/50 p-1">
             <button
               onClick={() => setActiveTab('metrics')}
-              className={`flex-1 py-1 rounded-md font-medium transition-colors ${
-                activeTab === 'metrics' ? 'bg-[#168CC5] text-white shadow' : 'text-[#8D9A9A] hover:text-white'
+              className={`flex-1 py-1.5 rounded-lg transition-colors ${
+                activeTab === 'metrics'
+                  ? 'bg-white text-sky-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Telemetry & History
             </button>
             <button
               onClick={() => setActiveTab('layers')}
-              className={`flex-1 py-1 rounded-md font-medium transition-colors ${
-                activeTab === 'layers' ? 'bg-[#168CC5] text-white shadow' : 'text-[#8D9A9A] hover:text-white'
+              className={`flex-1 py-1.5 rounded-lg transition-colors ${
+                activeTab === 'layers'
+                  ? 'bg-white text-sky-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              Layers
+              Map Layers
             </button>
           </div>
 
-          {/* Tab 1: Telemetry & Area-over-Time */}
-          {activeTab === 'metrics' ? (
-            <div className="space-y-3">
-              {/* Core Requirement 3: Automatic Flag when size drops past threshold */}
-              {isShrinkingPastThreshold ? (
-                <div className="flex items-center space-x-2 bg-[#EF4444]/20 border border-[#EF4444]/50 p-2.5 rounded-xl text-xs text-[#F87171] animate-in fade-in duration-200">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-[#EF4444] animate-pulse" />
-                  <div>
-                    <span className="font-bold block text-[11px] uppercase tracking-wide">
-                      ⚠️ Automatic Flag: Shrinking Past Threshold
+          {/* Content */}
+          <div className="p-3.5 space-y-3.5 max-h-[75vh] overflow-y-auto">
+            {activeTab === 'metrics' ? (
+              <div className="space-y-3">
+                {/* Surface Extent Stat Cards */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5">
+                    <span className="text-[10px] text-slate-500 block font-medium">Active Water Area</span>
+                    <span className="text-lg font-mono font-bold text-sky-700">
+                      {detectedArea.toFixed(1)} ha
                     </span>
-                    <span className="text-[10px] text-white/90">
-                      Water extent contracted by <span className="font-mono font-bold text-white">-{shrinkPct.toFixed(1)}%</span> from baseline (Threshold: 20%).
+                    <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                      {coverageRatio}% of basin
                     </span>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2 bg-[#10B981]/15 border border-[#10B981]/40 p-2 rounded-xl text-[10.5px] text-[#34D399]">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[#10B981]" />
-                  <span>Stable Water Body: Surface extent within standard seasonal threshold.</span>
-                </div>
-              )}
 
-              {/* Dual Metric Box */}
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-[#142D3B]/50 border border-white/5 rounded-xl p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#8D9A9A] block">
-                    Observed Water
-                  </span>
-                  <div className="text-lg font-bold font-mono text-[#47D4DF] mt-0.5">
-                    {detectedArea > 0 ? detectedArea.toFixed(1) : 'N/A'}{' '}
-                    <span className="text-[10px] text-[#8D9A9A]">ha</span>
-                  </div>
-                  <span className="text-[9px] text-[#8D9A9A] mt-0.5 block font-mono">
-                    {coverageRatio}% of basin
-                  </span>
-                </div>
-
-                <div className="bg-[#142D3B]/50 border border-white/5 rounded-xl p-2.5">
-                  <span className="text-[9px] uppercase tracking-wider text-[#8D9A9A] block">
-                    Cadastral Basin
-                  </span>
-                  <div className="text-lg font-bold font-mono text-white mt-0.5">
-                    {cadastralArea.toFixed(1)}{' '}
-                    <span className="text-[10px] text-[#8D9A9A]">ha</span>
-                  </div>
-                  <span className="text-[9px] text-[#8D9A9A] mt-0.5 block font-mono">
-                    BBMP Master Extent
-                  </span>
-                </div>
-              </div>
-
-              {/* Core Requirement 2: Area-over-time chart for each water body */}
-              <div className="bg-[#142D3B]/40 border border-white/10 rounded-xl p-2.5 space-y-1.5">
-                <div className="flex items-center justify-between text-[10px]">
-                  <div className="flex items-center space-x-1.5 text-white font-semibold">
-                    <TrendingDown className="w-3 h-3 text-[#47D4DF]" />
-                    <span>Area-over-Time Trend</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-[9px] font-mono text-[#8D9A9A]">
-                    <span className="flex items-center space-x-1">
-                      <span className="w-2 h-0.5 bg-[#47D4DF]" />
-                      <span>Water</span>
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5">
+                    <span className="text-[10px] text-slate-500 block font-medium">Cadastral Boundary</span>
+                    <span className="text-lg font-mono font-bold text-slate-800">
+                      {cadastralArea.toFixed(1)} ha
                     </span>
-                    <span className="flex items-center space-x-1">
-                      <span className="w-2 border-t border-dashed border-[#EF4444]" />
-                      <span>-20% Threshold</span>
+                    <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                      Legal baseline
                     </span>
                   </div>
                 </div>
 
-                {/* SVG Line / Area Sparkline Chart */}
-                <div className="relative">
-                  <svg
-                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="w-full h-16 overflow-visible"
-                  >
-                    <defs>
-                      <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#47D4DF" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#168CC5" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
+                {/* Core Feature 2: Area-over-time chart */}
+                <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-800">
+                      <TrendingDown className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Area-over-Time Trend</span>
+                    </div>
+                    <span className="text-[9px] font-mono text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                      2017 – 2024
+                    </span>
+                  </div>
 
-                    {/* Threshold Dashed Line (-20%) */}
-                    <line
-                      x1={padX}
-                      y1={thresholdY}
-                      x2={chartWidth - padX}
-                      y2={thresholdY}
-                      stroke="#EF4444"
-                      strokeWidth="1"
-                      strokeDasharray="3 3"
-                      opacity="0.8"
-                    />
+                  {/* SVG Sparkline Container */}
+                  <div className="relative w-full h-[65px] bg-white rounded-lg border border-slate-200/80 overflow-hidden flex items-center justify-center">
+                    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full">
+                      <defs>
+                        <linearGradient id="areaGradientLight" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#0284C7" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#0284C7" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
 
-                    {/* Area fill */}
-                    {areaD && <path d={areaD} fill="url(#areaGradient)" />}
-
-                    {/* Line stroke */}
-                    {pathD && (
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke="#47D4DF"
-                        strokeWidth="2"
-                        strokeLinecap="round"
+                      {/* 20% Contraction Critical Threshold Line */}
+                      <line
+                        x1={padX}
+                        y1={thresholdY}
+                        x2={chartWidth - padX}
+                        y2={thresholdY}
+                        stroke="#EF4444"
+                        strokeWidth="1"
+                        strokeDasharray="3 3"
+                        strokeOpacity="0.6"
                       />
-                    )}
 
-                    {/* Interactive Points */}
-                    {coords.map((c, idx) => {
-                      const isSelected = selectedObservationIndex === idx;
-                      return (
-                        <g
-                          key={c.year}
-                          className="cursor-pointer"
-                          onClick={() => setSelectedObservationIndex(idx)}
-                        >
-                          <circle
-                            cx={c.x}
-                            cy={c.y}
-                            r={isSelected ? 4.5 : 3}
-                            fill={isSelected ? '#47D4DF' : '#101A20'}
-                            stroke={isSelected ? '#FFFFFF' : '#47D4DF'}
-                            strokeWidth="2"
-                          />
-                          <text
-                            x={c.x}
-                            y={chartHeight - 1}
-                            textAnchor="middle"
-                            fill={isSelected ? '#47D4DF' : '#8D9A9A'}
-                            fontSize="8"
-                            fontFamily="monospace"
+                      {/* Area fill */}
+                      {areaD && <path d={areaD} fill="url(#areaGradientLight)" />}
+
+                      {/* Line stroke */}
+                      {pathD && (
+                        <path
+                          d={pathD}
+                          fill="none"
+                          stroke="#0284C7"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        />
+                      )}
+
+                      {/* Interactive Points */}
+                      {coords.map((c, idx) => {
+                        const isSelected = selectedObservationIndex === idx;
+                        return (
+                          <g
+                            key={c.year}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedObservationIndex(idx)}
                           >
-                            {c.year}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                <div className="flex items-center justify-between text-[9px] font-mono text-[#8D9A9A] pt-0.5 border-t border-white/5">
-                  <span>2017: {trendPoints[0]?.area.toFixed(1)} ha</span>
-                  <span className={shrinkPct > 20 ? 'text-[#F87171] font-bold' : 'text-white'}>
-                    2024: {trendPoints[trendPoints.length - 1]?.area.toFixed(1)} ha
-                  </span>
-                </div>
-              </div>
-
-              {/* Civic Encroachment Audit Status Card */}
-              <div className={`rounded-xl p-2.5 border text-xs ${
-                isEncroached
-                  ? 'bg-[#EF4444]/10 border-[#EF4444]/30'
-                  : 'bg-[#10B981]/10 border-[#10B981]/30'
-              }`}>
-                <div className="flex items-center space-x-1.5 mb-1">
-                  {isEncroached ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-[#F87171]" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#34D399]" />
-                  )}
-                  <span className={`font-semibold text-[11px] ${
-                    isEncroached ? 'text-[#F87171]' : 'text-[#34D399]'
-                  }`}>
-                    {selectedLake.encroachment_status || 'Free of Intrusion (Restored)'}
-                  </span>
-                </div>
-                {selectedLake.encroached_area_hectares ? (
-                  <div className="text-[10px] text-[#8D9A9A] leading-relaxed">
-                    <span className="text-white font-mono font-bold">
-                      {selectedLake.encroached_area_hectares} ha
-                    </span>{' '}
-                    permanently occupied by human settlements & layouts.
-                    {selectedLake.encroachment_type && (
-                      <div className="text-[#D1D5DB] mt-1 text-[9.5px]">
-                        <span className="text-[#8D9A9A]">Type:</span> {selectedLake.encroachment_type}
-                      </div>
-                    )}
+                            <circle
+                              cx={c.x}
+                              cy={c.y}
+                              r={isSelected ? 4.5 : 3}
+                              fill={isSelected ? '#0284C7' : '#FFFFFF'}
+                              stroke={isSelected ? '#FFFFFF' : '#0284C7'}
+                              strokeWidth="2"
+                            />
+                            <text
+                              x={c.x}
+                              y={chartHeight - 1}
+                              textAnchor="middle"
+                              fill={isSelected ? '#0284C7' : '#64748B'}
+                              fontSize="8"
+                              fontFamily="monospace"
+                              fontWeight={isSelected ? 'bold' : 'normal'}
+                            >
+                              {c.year}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
                   </div>
-                ) : (
-                  <div className="text-[10px] text-[#34D399]/90">
-                    No active illegal settlements detected. Fully protected or restored by civic authorities.
+
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5 border-t border-slate-200/60">
+                    <span>2017: {trendPoints[0]?.area.toFixed(1)} ha</span>
+                    <span className={shrinkPct > 20 ? 'text-red-600 font-bold' : 'text-slate-800 font-bold'}>
+                      2024: {trendPoints[trendPoints.length - 1]?.area.toFixed(1)} ha
+                    </span>
+                  </div>
+                </div>
+
+                {/* Core Feature 3: Automatic Flag when size drops past threshold */}
+                {isShrinkingPastThreshold && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 flex items-start space-x-2 text-xs animate-in fade-in duration-200">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
+                    <div>
+                      <span className="font-bold text-red-800 block">
+                        ⚠️ Automatic Flag: Shrinking Past Threshold
+                      </span>
+                      <p className="text-[11px] text-red-700 mt-0.5 leading-snug">
+                        Significant surface area contraction of <strong className="font-mono">-{shrinkPct.toFixed(1)}%</strong> detected since baseline observation. Exceeds critical 20% shrinkage threshold.
+                      </p>
+                    </div>
                   </div>
                 )}
+
+                {/* Civic Encroachment Audit Status Card */}
+                <div className={`rounded-xl p-2.5 border text-xs ${
+                  isEncroached
+                    ? 'bg-red-50/70 border-red-200 text-red-900'
+                    : 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold flex items-center space-x-1.5">
+                      {isEncroached ? (
+                        <Shield className="w-3.5 h-3.5 text-red-600" />
+                      ) : (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      )}
+                      <span>{selectedLake.encroachment_status || 'Free of Intrusion (Restored)'}</span>
+                    </span>
+                    {isEncroached && (
+                      <span className="font-mono text-red-700 font-bold bg-white px-2 py-0.5 rounded border border-red-200 text-[10px]">
+                        +{selectedLake.encroached_area_hectares?.toFixed(1) || '0.0'} ha
+                      </span>
+                    )}
+                  </div>
+                  {isEncroached && (
+                    <p className="text-[11px] text-red-700/90 mt-1 leading-snug">
+                      Unauthorized layouts, commercial building developments, or road network encroachment identified within buffer zone.
+                    </p>
+                  )}
+                </div>
               </div>
+            ) : (
+              /* Tab 2: Map Layers Toggle */
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="font-medium text-slate-700">Legal Cadastral Basin</span>
+                  <input
+                    type="checkbox"
+                    checked={layers.cadastralBoundary}
+                    onChange={() => toggleLayer('cadastralBoundary')}
+                    className="accent-sky-600 h-4 w-4 cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="font-medium text-slate-700">Satellite Water Mask</span>
+                  <input
+                    type="checkbox"
+                    checked={layers.detectedWater}
+                    onChange={() => toggleLayer('detectedWater')}
+                    className="accent-sky-600 h-4 w-4 cursor-pointer"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="font-medium text-slate-700">Encroachment Land</span>
+                  <input
+                    type="checkbox"
+                    checked={layers.lostWater}
+                    onChange={() => toggleLayer('lostWater')}
+                    className="accent-red-600 h-4 w-4 cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Quick Action Footer Buttons */}
+            <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-xs">
+              <button
+                onClick={() => setActiveScreen('comparison-studio')}
+                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-semibold transition-colors"
+              >
+                Side-by-Side
+              </button>
+              <button
+                onClick={() => setActiveScreen('restoration-lab')}
+                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-semibold transition-colors"
+              >
+                Simulation
+              </button>
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                className="py-1.5 px-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-center font-semibold transition-colors shadow-sm"
+              >
+                Audit Report
+              </button>
             </div>
-          ) : (
-            /* Tab 2: Map Layers Toggle */
-            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-              <button
-                onClick={() => toggleLayer('cadastralBoundary')}
-                className={`p-2 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                  layers.cadastralBoundary
-                    ? 'border-[#47D4DF]/50 bg-[#47D4DF]/10 text-white'
-                    : 'border-white/5 bg-white/5 text-[#8D9A9A]'
-                }`}
-              >
-                <span>Basin Line</span>
-                <span className="w-2 h-2 rounded-full border border-[#47D4DF]" />
-              </button>
-
-              <button
-                onClick={() => toggleLayer('detectedWater')}
-                className={`p-2 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                  layers.detectedWater
-                    ? 'border-[#168CC5]/50 bg-[#168CC5]/10 text-white'
-                    : 'border-white/5 bg-white/5 text-[#8D9A9A]'
-                }`}
-              >
-                <span>Water Mask</span>
-                <span className="w-2 h-2 rounded-full bg-[#168CC5]" />
-              </button>
-
-              <button
-                onClick={() => toggleLayer('lostWater')}
-                className={`p-2 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                  layers.lostWater
-                    ? 'border-[#EF4444]/50 bg-[#EF4444]/10 text-white'
-                    : 'border-white/5 bg-white/5 text-[#8D9A9A]'
-                }`}
-              >
-                <span>Encroachment</span>
-                <span className="w-2 h-2 rounded-full bg-[#EF4444]" />
-              </button>
-
-              <button
-                onClick={() => toggleLayer('gainedWater')}
-                className={`p-2 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                  layers.gainedWater
-                    ? 'border-[#329B71]/50 bg-[#329B71]/10 text-white'
-                    : 'border-white/5 bg-white/5 text-[#8D9A9A]'
-                }`}
-              >
-                <span>Recharge</span>
-                <span className="w-2 h-2 rounded-full bg-[#329B71]" />
-              </button>
-            </div>
-          )}
-
-          {/* Quick Action Footer */}
-          <div className="border-t border-white/10 pt-2.5 grid grid-cols-3 gap-1.5 text-xs">
-            <button
-              onClick={() => setActiveScreen('comparison-studio')}
-              className="py-1.5 px-2 bg-white/5 hover:bg-white/10 text-[#47D4DF] rounded-lg text-center font-medium transition-colors"
-            >
-              Side-by-Side
-            </button>
-            <button
-              onClick={() => setActiveScreen('restoration-lab')}
-              className="py-1.5 px-2 bg-white/5 hover:bg-white/10 text-[#329B71] rounded-lg text-center font-medium transition-colors"
-            >
-              What-If
-            </button>
-            <button
-              onClick={() => setIsReportModalOpen(true)}
-              className="py-1.5 px-2 bg-[#168CC5] hover:bg-[#168CC5]/80 text-white rounded-lg text-center font-medium shadow-water-glow transition-all"
-            >
-              Audit Report
-            </button>
           </div>
         </div>
       )}
