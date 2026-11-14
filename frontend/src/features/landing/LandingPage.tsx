@@ -214,7 +214,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-slate-900 group-hover:text-cyan-700 transition-colors">2. Area-Over-Time Trend Chart</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-                Multi-temporal sparkline plotting surface water area across 2017, 2019, 2021, 2023, and 2024. Click any year dot node to inspect seasonal surface area in hectares.
+                Multi-temporal sparkline plotting surface water area across 2017, 2019, 2021, 2023, 2024, and 2026. Click any year dot node to inspect seasonal surface area in hectares.
               </p>
               <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-cyan-600 group-hover:translate-x-1 transition-transform">
                 <span>View Historical Trends →</span>
@@ -248,7 +248,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">4. Side-by-Side Satellite View</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-                Dual photographic observation studio and in-map interactive curtain swipe comparing 2017 baseline vs 2024 contemporary imagery showing buildings and roads.
+                Dual photographic observation studio and in-map interactive curtain swipe comparing 2017 baseline vs 2026 contemporary imagery showing buildings and roads.
               </p>
               <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center text-xs font-semibold text-indigo-600 group-hover:translate-x-1 transition-transform">
                 <span>Open Satellite Studio →</span>
@@ -291,7 +291,7 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
                 <span className="text-slate-500">2017: 324.5 ha</span>
-                <span className="text-red-600 font-bold">2024: 119.0 ha</span>
+                <span className="text-red-600 font-bold">2026: 108.5 ha</span>
               </div>
             </div>
 
@@ -314,7 +314,7 @@ export const LandingPage: React.FC = () => {
               </p>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
                 <span className="text-slate-500">2017: 180.2 ha</span>
-                <span className="text-red-600 font-bold">2024: 75.3 ha</span>
+                <span className="text-red-600 font-bold">2026: 72.8 ha</span>
               </div>
             </div>
 

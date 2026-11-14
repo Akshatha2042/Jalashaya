@@ -30,7 +30,9 @@ export const LakeTelemetryCard: React.FC = () => {
     setActiveScreen,
     setIsReportModalOpen,
     isTelemetryOpen,
-    setIsTelemetryOpen
+    setIsTelemetryOpen,
+    satelliteProvider,
+    setSatelliteProvider
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'layers'>('metrics');
@@ -183,7 +185,7 @@ export const LakeTelemetryCard: React.FC = () => {
                       <span>Area-over-Time Trend</span>
                     </div>
                     <span className="text-[9px] font-mono text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                      2017 – 2024
+                      {trendPoints[0]?.year || '2017'} – {trendPoints[trendPoints.length - 1]?.year || '2026'}
                     </span>
                   </div>
 
@@ -260,7 +262,7 @@ export const LakeTelemetryCard: React.FC = () => {
                   <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5 border-t border-slate-200/60">
                     <span>2017: {trendPoints[0]?.area.toFixed(1)} ha</span>
                     <span className={shrinkPct > 20 ? 'text-red-600 font-bold' : 'text-slate-800 font-bold'}>
-                      2024: {trendPoints[trendPoints.length - 1]?.area.toFixed(1)} ha
+                      {trendPoints[trendPoints.length - 1]?.year || '2026'}: {trendPoints[trendPoints.length - 1]?.area.toFixed(1)} ha
                     </span>
                   </div>
                 </div>
@@ -311,6 +313,33 @@ export const LakeTelemetryCard: React.FC = () => {
             ) : (
               /* Tab 2: Map Layers Toggle */
               <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="font-medium text-slate-700">Aerial Imagery Provider</span>
+                  <div className="flex items-center bg-white p-0.5 rounded-md border border-slate-200 text-[10px]">
+                    <button
+                      onClick={() => setSatelliteProvider('google')}
+                      className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                        satelliteProvider === 'google'
+                          ? 'bg-emerald-100 text-emerald-800 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Google Maps Ultra-HD Hybrid Satellite (2026 sub-meter)"
+                    >
+                      Google HD
+                    </button>
+                    <button
+                      onClick={() => setSatelliteProvider('esri')}
+                      className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                        satelliteProvider === 'esri'
+                          ? 'bg-sky-100 text-sky-800 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Esri World Imagery"
+                    >
+                      Esri
+                    </button>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
                   <span className="font-medium text-slate-700">Legal Cadastral Basin</span>
                   <input

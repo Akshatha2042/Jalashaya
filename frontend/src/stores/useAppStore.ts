@@ -31,6 +31,8 @@ interface AppStoreState {
   // Active Map Layers
   layers: MapLayerState;
   toggleLayer: (layer: keyof MapLayerState) => void;
+  satelliteProvider: 'google' | 'esri';
+  setSatelliteProvider: (provider: 'google' | 'esri') => void;
 
   // Camera Target
   cameraTarget: { center: [number, number]; zoom: number; pitch: number; bearing: number } | null;
@@ -135,6 +137,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     labels: true,
     terrain3D: true,
   },
+  satelliteProvider: 'google',
+  setSatelliteProvider: (provider) => set({ satelliteProvider: provider }),
   toggleLayer: (layer) =>
     set((state) => ({
       layers: { ...state.layers, [layer]: !state.layers[layer] },

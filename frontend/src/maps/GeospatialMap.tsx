@@ -20,9 +20,11 @@ const SATELLITE_YEAR_TILES: Record<string, string> = {
   '2019': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/e4fd1c803cb99632c055db244f332f81-82d54ebf1d65ef66f5e0fd3ba85eccde/tiles/{z}/{x}/{y}',
   '2021': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/4672992e2608c7723bf2d4ae0a19f8f1-d97bbbc563ed8b4b550b750010d39eff/tiles/{z}/{x}/{y}',
   '2023': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/515bc66b96e4617167c1d9fa967d020b-9828741dc7d78bd99c07e50c468864b0/tiles/{z}/{x}/{y}',
-  '2024': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}'
+  '2024': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}',
+  '2026': 'https://earthengine.googleapis.com/v1/projects/lofty-voyage-514704-s5/maps/0e703e567f846f665fe9887974793aac-813199d4a413cbaeea7990a6af498696/tiles/{z}/{x}/{y}'
 };
 
+const GOOGLE_SATELLITE_URL = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 const ESRI_SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ESRI_LABELS_URL = 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
@@ -52,11 +54,13 @@ export const GeospatialMap: React.FC = () => {
     maskOpacity,
     setMaskOpacity,
     showSatelliteOverlay,
-    setShowSatelliteOverlay
+    setShowSatelliteOverlay,
+    satelliteProvider,
+    setSatelliteProvider
   } = useAppStore();
 
   const currentObservation = observations[selectedObservationIndex] || null;
-  const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2024';
+  const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2026';
 
   // 1. Initialize Main Map
   useEffect(() => {
@@ -67,6 +71,12 @@ export const GeospatialMap: React.FC = () => {
       style: {
         version: 8,
         sources: {
+          'google-satellite': {
+            type: 'raster',
+            tiles: [GOOGLE_SATELLITE_URL],
+            tileSize: 256,
+            attribution: '© Google Maps'
+          },
           'esri-satellite': {
             type: 'raster',
             tiles: [ESRI_SATELLITE_URL],
@@ -98,6 +108,11 @@ export const GeospatialMap: React.FC = () => {
             tiles: [SATELLITE_YEAR_TILES['2024']],
             tileSize: 256
           },
+          'gee-2026': {
+            type: 'raster',
+            tiles: [SATELLITE_YEAR_TILES['2026']],
+            tileSize: 256
+          },
           'esri-labels': {
             type: 'raster',
             tiles: [ESRI_LABELS_URL],
@@ -105,13 +120,23 @@ export const GeospatialMap: React.FC = () => {
           }
         },
         layers: [
+          // Base Satellite Layer: Google Maps Hybrid (Ultra-Crisp Sub-Meter 2026)
+          {
+            id: 'base-google-satellite',
+            type: 'raster',
+            source: 'google-satellite',
+            minzoom: 0,
+            maxzoom: 22,
+            layout: { visibility: 'visible' }
+          },
           // Base Satellite Layer: Contemporary High-Res Esri
           {
             id: 'base-esri-satellite',
             type: 'raster',
             source: 'esri-satellite',
             minzoom: 0,
-            maxzoom: 20
+            maxzoom: 20,
+            layout: { visibility: 'none' }
           },
           // Multi-Temporal Sentinel-2 True-Color Layers
           {
@@ -142,6 +167,12 @@ export const GeospatialMap: React.FC = () => {
             id: 'layer-gee-2024',
             type: 'raster',
             source: 'gee-2024',
+            layout: { visibility: 'none' }
+          },
+          {
+            id: 'layer-gee-2026',
+            type: 'raster',
+            source: 'gee-2026',
             layout: { visibility: 'none' }
           },
           {
@@ -463,13 +494,13 @@ export const GeospatialMap: React.FC = () => {
     };
   }, [isSwipeMode]);
 
-  // 3. Update Satellite Imagery Tiles when Year Changes on Timeline
+  // 3. Update Satellite Imagery Tiles when Year Changes on Timeline & Provider
   useEffect(() => {
     if (!mapMainRef.current) return;
     const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
-    const years = ['2017', '2019', '2021', '2023', '2024'];
+    const years = ['2017', '2019', '2021', '2023', '2024', '2026'];
     years.forEach((y) => {
       const layerId = `layer-gee-${y}`;
       if (map.getLayer(layerId)) {
@@ -478,11 +509,23 @@ export const GeospatialMap: React.FC = () => {
       }
     });
 
-    // If viewing 2024 without overlay, contemporary Esri high-res is active
-    if (map.getLayer('base-esri-satellite')) {
-      map.setLayoutProperty('base-esri-satellite', 'visibility', layers.satellite ? 'visible' : 'none');
+    // Base satellite provider selection (Google Maps Ultra-HD vs Esri Maxar)
+    const showBase = layers.satellite && !showSatelliteOverlay;
+    if (map.getLayer('base-google-satellite')) {
+      map.setLayoutProperty(
+        'base-google-satellite',
+        'visibility',
+        showBase && satelliteProvider === 'google' ? 'visible' : 'none'
+      );
     }
-  }, [currentYear, showSatelliteOverlay, layers.satellite]);
+    if (map.getLayer('base-esri-satellite')) {
+      map.setLayoutProperty(
+        'base-esri-satellite',
+        'visibility',
+        showBase && satelliteProvider === 'esri' ? 'visible' : 'none'
+      );
+    }
+  }, [currentYear, showSatelliteOverlay, layers.satellite, satelliteProvider]);
 
   // 4. Update Encroachment Mask Opacity
   useEffect(() => {
@@ -748,7 +791,7 @@ export const GeospatialMap: React.FC = () => {
 
           <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-red-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-            <span className="font-bold text-red-700">2024 Current Satellite</span>
+            <span className="font-bold text-red-700">2026 Contemporary Satellite</span>
             <span className="text-[10px] text-slate-500 font-mono">(Urban Encroachment)</span>
           </div>
         </>
@@ -756,6 +799,36 @@ export const GeospatialMap: React.FC = () => {
 
       {/* Satellite Visual Difference Control Toolbar (Floating Below Header, Center) */}
       <div className="absolute top-[62px] left-1/2 -translate-x-1/2 z-30 pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-xl px-3 py-1.5 shadow-md flex items-center space-x-3 text-xs text-slate-800">
+        {/* Map Provider Toggle (Google Maps vs Esri) */}
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-semibold">
+          <button
+            onClick={() => setSatelliteProvider('google')}
+            className={`px-2 py-0.5 rounded-md transition-all flex items-center gap-1 ${
+              satelliteProvider === 'google'
+                ? 'bg-white text-emerald-700 shadow-sm font-bold'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+            title="Google Maps Ultra-HD Hybrid Satellite (High-Res 2026 aerial)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Google HD</span>
+          </button>
+          <button
+            onClick={() => setSatelliteProvider('esri')}
+            className={`px-2 py-0.5 rounded-md transition-all flex items-center gap-1 ${
+              satelliteProvider === 'esri'
+                ? 'bg-white text-sky-700 shadow-sm font-bold'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+            title="Esri World Imagery (Maxar 30cm)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+            <span>Esri Maxar</span>
+          </button>
+        </div>
+
+        <span className="text-slate-300">|</span>
+
         {/* Swipe Mode Toggle Button */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
@@ -763,7 +836,7 @@ export const GeospatialMap: React.FC = () => {
             ? 'bg-sky-600 text-white shadow-sm font-bold'
             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
-          title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2024 satellite photos"
+          title="Toggle Split-Screen Swipe Curtain to compare 2017 vs 2026 satellite photos"
         >
           <SplitSquareVertical className="w-3.5 h-3.5" />
           <span>{isSwipeMode ? 'Exit Swipe' : '🛰️ Satellite Swipe Curtain'}</span>
@@ -776,7 +849,7 @@ export const GeospatialMap: React.FC = () => {
           <Calendar className="w-3 h-3 text-sky-600" />
           <span className="text-slate-500 hidden sm:inline">Orbit:</span>
           <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
-            {isSwipeMode ? '2017 ◀ ▶ 2024' : `${currentYear} Sentinel-2`}
+            {isSwipeMode ? '2017 ◀ ▶ 2026' : `${currentYear} Sentinel-2`}
           </span>
         </div>
 

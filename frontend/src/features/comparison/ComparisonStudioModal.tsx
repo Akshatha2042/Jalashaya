@@ -47,7 +47,7 @@ export const ComparisonStudioModal: React.FC = () => {
   const newerObs = observations.find((o) => o.id === comparisonNewerId) || observations[observations.length - 1];
 
   const oldYear = olderObs ? olderObs.observation_date.split('-')[0] : '2017';
-  const newYear = newerObs ? newerObs.observation_date.split('-')[0] : '2024';
+  const newYear = newerObs ? newerObs.observation_date.split('-')[0] : '2026';
 
   const isShrinking = comparisonData && comparisonData.area_change_hectares < 0 && Math.abs(comparisonData.change_percentage) >= 20.0;
 
@@ -94,9 +94,12 @@ export const ComparisonStudioModal: React.FC = () => {
     };
   }, [selectedLake]);
 
-  // High-Resolution Satellite imagery URL (Sub-meter ground resolution, ultra-clear)
+  // High-Resolution Satellite imagery URL (Supports Google Maps Static Satellite or Esri Sub-Meter export)
+  const googleApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
   const highResSatelliteUrl = lakeBBox
-    ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
+    ? googleApiKey
+      ? `https://maps.googleapis.com/maps/api/staticmap?center=${selectedLake.latitude},${selectedLake.longitude}&zoom=15&size=1024x640&maptype=hybrid&key=${googleApiKey}`
+      : `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
     : '';
 
   // Project vector geometries accurately onto the satellite image coordinate frame

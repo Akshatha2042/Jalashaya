@@ -8,7 +8,7 @@ Catalog Summary:
 Total Active BBMP Lakes: 185
   - Free of Intrusion (Restored/Preserved): 49 lakes
   - Encroached (Public/Private Settlements): 136 lakes
-Observations per lake: 5 temporal benchmarks (2017, 2019, 2021, 2023, 2024) = 925 total observations.
+Observations per lake: 6 temporal benchmarks (2017, 2019, 2021, 2023, 2024, 2026) = 1,110 total observations.
 """
 
 import json
