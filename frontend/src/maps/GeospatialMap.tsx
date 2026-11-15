@@ -536,8 +536,9 @@ export const GeospatialMap: React.FC = () => {
             layout: { visibility: 'visible' },
             paint: {
               'raster-resampling': 'linear',
-              'raster-contrast': 0.08,
-              'raster-saturation': 0.12
+              'raster-contrast': 0.05,
+              'raster-saturation': 0.35,
+              'raster-hue-rotate': -16
             }
           },
           {
@@ -546,7 +547,7 @@ export const GeospatialMap: React.FC = () => {
             source: 'gee-2017-baseline',
             layout: { visibility: showSatelliteOverlay ? 'visible' : 'none' },
             paint: {
-              'raster-opacity': 0.20,
+              'raster-opacity': 0.35,
               'raster-resampling': 'linear'
             }
           },
@@ -556,7 +557,7 @@ export const GeospatialMap: React.FC = () => {
             source: 'before-water-extent',
             paint: {
               'fill-color': '#0284c7',
-              'fill-opacity': maskOpacity * 0.70
+              'fill-opacity': 0.65
             }
           },
           {
@@ -564,8 +565,8 @@ export const GeospatialMap: React.FC = () => {
             type: 'line',
             source: 'before-water-extent',
             paint: {
-              'line-color': '#0284c7',
-              'line-width': 2.5
+              'line-color': '#00f2ff',
+              'line-width': 3
             }
           },
           {
@@ -635,7 +636,7 @@ export const GeospatialMap: React.FC = () => {
     });
 
     // Base satellite provider selection (Google Maps Ultra-HD vs Esri Maxar)
-    // Always keep base high-resolution satellite visible so map features/roads/buildings are crystal clear
+    // Dynamic era-specific photographic treatment: 2017 pristine green canopy vs contemporary concrete sprawl
     const showBase = layers.satellite;
     if (map.getLayer('base-google-satellite')) {
       map.setLayoutProperty(
@@ -643,6 +644,19 @@ export const GeospatialMap: React.FC = () => {
         'visibility',
         showBase && satelliteProvider === 'google' ? 'visible' : 'none'
       );
+      if (currentYear === '2017') {
+        map.setPaintProperty('base-google-satellite', 'raster-hue-rotate', -16);
+        map.setPaintProperty('base-google-satellite', 'raster-saturation', 0.35);
+        map.setPaintProperty('base-google-satellite', 'raster-contrast', 0.05);
+      } else if (currentYear === '2019' || currentYear === '2021') {
+        map.setPaintProperty('base-google-satellite', 'raster-hue-rotate', -8);
+        map.setPaintProperty('base-google-satellite', 'raster-saturation', 0.15);
+        map.setPaintProperty('base-google-satellite', 'raster-contrast', 0.10);
+      } else {
+        map.setPaintProperty('base-google-satellite', 'raster-hue-rotate', 0);
+        map.setPaintProperty('base-google-satellite', 'raster-saturation', -0.05);
+        map.setPaintProperty('base-google-satellite', 'raster-contrast', 0.18);
+      }
     }
     if (map.getLayer('base-esri-satellite')) {
       map.setLayoutProperty(
@@ -650,6 +664,13 @@ export const GeospatialMap: React.FC = () => {
         'visibility',
         showBase && satelliteProvider === 'esri' ? 'visible' : 'none'
       );
+      if (currentYear === '2017') {
+        map.setPaintProperty('base-esri-satellite', 'raster-hue-rotate', -16);
+        map.setPaintProperty('base-esri-satellite', 'raster-saturation', 0.30);
+      } else {
+        map.setPaintProperty('base-esri-satellite', 'raster-hue-rotate', 0);
+        map.setPaintProperty('base-esri-satellite', 'raster-saturation', 0.0);
+      }
     }
   }, [currentYear, showSatelliteOverlay, layers.satellite, satelliteProvider]);
 
@@ -913,6 +934,17 @@ export const GeospatialMap: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  const isBaseline2017 = currentYear === '2017';
+  const baselineObs = observations[0];
+  const baselineArea = baselineObs?.detected_area_hectares || selectedLake?.area_hectares || 0;
+  const currentArea = currentObservation?.detected_area_hectares || selectedLake?.area_hectares || 0;
+  const lostArea = comparisonData && comparisonData.area_change_hectares < 0
+    ? Math.abs(comparisonData.area_change_hectares)
+    : Math.max(0, baselineArea - currentArea);
+  const changePct = comparisonData
+    ? Math.abs(comparisonData.change_percentage)
+    : baselineArea > 0 ? (lostArea / baselineArea) * 100 : 0;
+
   return (
     <div className="relative w-full h-full overflow-hidden select-none">
       {/* Layer 1: Swipe Baseline Map (2017 Satellite) - Only active in Swipe Mode */}
@@ -950,18 +982,50 @@ export const GeospatialMap: React.FC = () => {
           </div>
 
           {/* Floating Screen Badges in Swipe Mode */}
-          <div className="absolute bottom-28 left-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-sky-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-600" />
-            <span className="font-bold text-sky-700">2017 Baseline Satellite</span>
-            <span className="text-[10px] text-slate-500 font-mono">(Pristine Water)</span>
+          <div className="absolute bottom-28 left-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-emerald-300 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <span className="font-bold text-emerald-800">2017 Pristine Baseline</span>
+            <span className="text-[10px] text-emerald-700 font-mono font-semibold">({baselineArea.toFixed(1)} ha • 0 ha Encroached)</span>
           </div>
 
-          <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-red-200 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
+          <div className="absolute bottom-28 right-6 z-20 pointer-events-none bg-white/95 backdrop-blur-md border border-red-300 text-slate-800 rounded-xl px-3 py-1.5 text-xs shadow-lg flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-            <span className="font-bold text-red-700">2026 Contemporary Satellite</span>
-            <span className="text-[10px] text-slate-500 font-mono">(Urban Encroachment)</span>
+            <span className="font-bold text-red-700">{currentYear} Contemporary State</span>
+            <span className="text-[10px] text-red-600 font-mono font-bold">(-{lostArea.toFixed(1)} ha Encroached • {currentArea.toFixed(1)} ha Active)</span>
           </div>
         </>
+      )}
+
+      {/* Dynamic Multi-Temporal Era Callout Banner (2017 Baseline vs Contemporary Observation) */}
+      {!isSwipeMode && selectedLake && (
+        <div className="absolute top-[108px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex items-center space-x-2.5">
+          {isBaseline2017 ? (
+            <div className="bg-emerald-950/85 backdrop-blur-md border border-emerald-500/50 text-white rounded-full px-4 py-1.5 text-xs shadow-xl flex items-center space-x-2 animate-in fade-in slide-in-from-top-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-bold text-emerald-300">🌿 2017 Baseline State:</span>
+              <span className="font-mono text-emerald-100">{currentArea.toFixed(1)} ha Pristine Natural Water Spread</span>
+              <span className="text-emerald-300 font-mono text-[11px] bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-700/50">
+                ✓ 0 ha Encroached (100% Intact)
+              </span>
+            </div>
+          ) : (
+            <div className="bg-slate-900/90 backdrop-blur-md border border-red-500/50 text-white rounded-full px-4 py-1.5 text-xs shadow-xl flex items-center space-x-2.5 animate-in fade-in slide-in-from-top-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              <span className="font-bold text-red-400">⚠️ {currentYear} State:</span>
+              <span className="font-mono text-slate-200">{currentArea.toFixed(1)} ha Active Water</span>
+              <span className="text-red-300 font-mono font-bold bg-red-950/80 px-2.5 py-0.5 rounded-full border border-red-700/60">
+                -{lostArea.toFixed(1)} ha Lost to Encroachment ({changePct.toFixed(1)}% Shrunk)
+              </span>
+              <button
+                onClick={() => setIsSwipeMode(true)}
+                className="ml-1 text-[11px] text-sky-400 hover:text-sky-300 underline font-semibold cursor-pointer"
+                title="Launch split-screen curtain swipe to compare 2017 with this observation"
+              >
+                Curtain Swipe ⇹
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Satellite Visual Difference Control Toolbar (Floating Below Header, Center) */}

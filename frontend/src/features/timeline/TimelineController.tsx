@@ -116,6 +116,7 @@ export const TimelineController: React.FC = () => {
           {observations.map((obs, idx) => {
             const isSelected = selectedObservationIndex === idx;
             const year = obs.observation_date.split('-')[0];
+            const is2017 = year === '2017';
 
             return (
               <button
@@ -125,21 +126,33 @@ export const TimelineController: React.FC = () => {
                   setSelectedObservationIndex(idx);
                 }}
                 className="relative z-10 flex flex-col items-center group cursor-pointer"
+                title={is2017 ? '2017 Pristine Baseline State' : `${year} Observation & Encroachment`}
               >
                 {/* Marker Dot */}
                 <div
                   className={`w-3.5 h-3.5 rounded-full border-2 transition-all flex items-center justify-center ${
                     isSelected
-                      ? 'bg-sky-600 border-white ring-2 ring-sky-600 scale-125 shadow-sm'
+                      ? is2017
+                        ? 'bg-emerald-600 border-white ring-2 ring-emerald-600 scale-125 shadow-sm'
+                        : 'bg-sky-600 border-white ring-2 ring-sky-600 scale-125 shadow-sm'
+                      : is2017
+                      ? 'bg-emerald-100 border-emerald-400 group-hover:border-emerald-600'
                       : 'bg-white border-slate-300 group-hover:border-sky-500'
                   }`}
                 />
                 <span
-                  className={`text-[10px] font-mono mt-1 font-semibold transition-colors ${
-                    isSelected ? 'text-sky-700 font-bold' : 'text-slate-500 group-hover:text-slate-800'
+                  className={`text-[10px] font-mono mt-1 font-semibold transition-colors flex items-center gap-0.5 ${
+                    isSelected
+                      ? is2017
+                        ? 'text-emerald-700 font-bold'
+                        : 'text-sky-700 font-bold'
+                      : is2017
+                      ? 'text-emerald-600'
+                      : 'text-slate-500 group-hover:text-slate-800'
                   }`}
                 >
-                  {year}
+                  {is2017 && <span className="text-[9px]">🌿</span>}
+                  <span>{year}</span>
                 </span>
               </button>
             );
