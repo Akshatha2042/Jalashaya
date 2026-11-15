@@ -67,11 +67,15 @@ def test_e2e_digital_twin_map_and_hud(browser_context):
     context = browser_context.new_context(viewport={"width": 1440, "height": 900})
     page = context.new_page()
     page.goto(f"{FRONTEND_URL}/#map", wait_until="networkidle")
-    time.sleep(2)
+    page.wait_for_selector(".maplibregl-canvas", timeout=10000)
+    page.wait_for_selector("text=Digital Twin", timeout=10000)
 
     # Verify map canvas and HUD components
     assert page.locator(".maplibregl-canvas").first.is_visible()
     assert page.locator("text=Digital Twin").first.is_visible()
+
+    # Wait for lake inventory auto-selection
+    page.wait_for_selector("text=Bellandur Lake", timeout=10000)
     assert page.locator("text=Bellandur Lake").first.is_visible()
 
     page.screenshot(path=os.path.join(SCREENSHOT_DIR, "04_digital_twin_map.png"))

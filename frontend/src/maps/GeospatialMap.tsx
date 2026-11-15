@@ -211,12 +211,15 @@ export const GeospatialMap: React.FC = () => {
       },
       center: [77.6300, 12.9600],
       zoom: 11.2,
-      pitch: 35,
-      bearing: -10,
+      pitch: 0,
+      bearing: 0,
+      dragRotate: false,
+      touchPitch: false,
       antialias: true
     });
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+    map.touchZoomRotate.disableRotation();
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: false }), 'bottom-right');
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
 
     map.on('load', () => {
@@ -263,7 +266,7 @@ export const GeospatialMap: React.FC = () => {
             '#EF4444',
             '#10B981'
           ],
-          'fill-opacity': 0.35
+          'fill-opacity': 0.20
         }
       });
 
@@ -313,7 +316,7 @@ export const GeospatialMap: React.FC = () => {
         source: 'detected-water',
         paint: {
           'fill-color': '#0284C7',
-          'fill-opacity': 0.85
+          'fill-opacity': 0.38
         }
       });
 
@@ -478,17 +481,23 @@ export const GeospatialMap: React.FC = () => {
 
     const centerObj = mapMainRef.current ? mapMainRef.current.getCenter() : { lng: 77.6300, lat: 12.9600 };
     const mainZoom = mapMainRef.current ? mapMainRef.current.getZoom() : 13;
-    const mainPitch = mapMainRef.current ? mapMainRef.current.getPitch() : 0;
-    const mainBearing = mapMainRef.current ? mapMainRef.current.getBearing() : 0;
 
     const mapBefore = new maplibregl.Map({
       container: swipeContainerRef.current,
       fadeDuration: 0,
-      maxTileCacheSize: 150,
+      maxTileCacheSize: 300,
       renderWorldCopies: false,
+      dragRotate: false,
+      touchPitch: false,
       style: {
         version: 8,
         sources: {
+          'google-satellite-before': {
+            type: 'raster',
+            tiles: GOOGLE_SATELLITE_TILES,
+            tileSize: 256,
+            attribution: '© Google Maps'
+          },
           'gee-2017-baseline': {
             type: 'raster',
             tiles: [SATELLITE_YEAR_TILES['2017']],
@@ -503,9 +512,27 @@ export const GeospatialMap: React.FC = () => {
         },
         layers: [
           {
+            id: 'before-base-satellite',
+            type: 'raster',
+            source: 'google-satellite-before',
+            minzoom: 0,
+            maxzoom: 22,
+            layout: { visibility: 'visible' },
+            paint: {
+              'raster-resampling': 'linear',
+              'raster-contrast': 0.08,
+              'raster-saturation': 0.12
+            }
+          },
+          {
             id: 'before-satellite',
             type: 'raster',
-            source: 'gee-2017-baseline'
+            source: 'gee-2017-baseline',
+            layout: { visibility: 'visible' },
+            paint: {
+              'raster-opacity': 0.55,
+              'raster-resampling': 'linear'
+            }
           },
           {
             id: 'before-labels',
@@ -516,12 +543,12 @@ export const GeospatialMap: React.FC = () => {
       },
       center: [centerObj.lng, centerObj.lat],
       zoom: mainZoom,
-      pitch: mainPitch,
-      bearing: mainBearing,
+      pitch: 0,
+      bearing: 0,
       interactive: false
     });
 
-    // Synchronize cameras between Main (After) and Before
+    // Synchronize cameras between Main (After) and Before strictly locked to True North
     if (mapMainRef.current) {
       let isSyncing = false;
       mapMainRef.current.on('move', () => {
@@ -530,8 +557,8 @@ export const GeospatialMap: React.FC = () => {
         mapBefore.jumpTo({
           center: mapMainRef.current!.getCenter(),
           zoom: mapMainRef.current!.getZoom(),
-          pitch: mapMainRef.current!.getPitch(),
-          bearing: mapMainRef.current!.getBearing()
+          pitch: 0,
+          bearing: 0
         });
         isSyncing = false;
       });
@@ -557,11 +584,15 @@ export const GeospatialMap: React.FC = () => {
       if (map.getLayer(layerId)) {
         const isTarget = y === currentYear && showSatelliteOverlay;
         map.setLayoutProperty(layerId, 'visibility', isTarget ? 'visible' : 'none');
+        if (isTarget) {
+          map.setPaintProperty(layerId, 'raster-opacity', 0.60);
+        }
       }
     });
 
     // Base satellite provider selection (Google Maps Ultra-HD vs Esri Maxar)
-    const showBase = layers.satellite && !showSatelliteOverlay;
+    // Always keep base high-resolution satellite visible so map features/roads/buildings are crystal clear
+    const showBase = layers.satellite;
     if (map.getLayer('base-google-satellite')) {
       map.setLayoutProperty(
         'base-google-satellite',
@@ -622,15 +653,15 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [lakes]);
 
-  // 6. Update Camera Target
+  // 6. Update Camera Target (Always Locked to True North: bearing 0, pitch 0)
   useEffect(() => {
     if (!mapMainRef.current || !cameraTarget) return;
     mapMainRef.current.flyTo({
       center: cameraTarget.center,
       zoom: cameraTarget.zoom,
-      pitch: cameraTarget.pitch,
-      bearing: cameraTarget.bearing,
-      duration: 2000,
+      pitch: 0,
+      bearing: 0,
+      duration: 1800,
       essential: true
     });
   }, [cameraTarget]);

@@ -208,8 +208,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
         cameraTarget: {
           center: [lakeDetail.longitude, lakeDetail.latitude],
           zoom: 14.2,
-          pitch: 45,
-          bearing: -10,
+          pitch: 0,
+          bearing: 0,
         },
       });
 
@@ -288,8 +288,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       cameraTarget: {
         center: [77.6300, 12.9600],
         zoom: 11.2,
-        pitch: 35,
-        bearing: -10,
+        pitch: 0,
+        bearing: 0,
       }
     });
   }
