@@ -79,10 +79,12 @@ export const GeospatialMap: React.FC = () => {
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       fadeDuration: 0,
-      maxTileCacheSize: 300,
+      maxTileCacheSize: 500,
       refreshExpiredTiles: false,
       trackResize: true,
       renderWorldCopies: false,
+      maxZoom: 21,
+      minZoom: 9,
       style: {
         version: 8,
         sources: {
@@ -90,12 +92,14 @@ export const GeospatialMap: React.FC = () => {
             type: 'raster',
             tiles: GOOGLE_SATELLITE_TILES,
             tileSize: 256,
+            maxzoom: 20,
             attribution: '© Google Maps'
           },
           'esri-satellite': {
             type: 'raster',
             tiles: ESRI_SATELLITE_TILES,
             tileSize: 256,
+            maxzoom: 20,
             attribution: '© Esri, Maxar'
           },
           'gee-2017': {
@@ -205,7 +209,8 @@ export const GeospatialMap: React.FC = () => {
             type: 'raster',
             source: 'esri-labels',
             minzoom: 8,
-            maxzoom: 20
+            maxzoom: 20,
+            layout: { visibility: 'none' }
           }
         ]
       },
@@ -485,10 +490,12 @@ export const GeospatialMap: React.FC = () => {
     const mapBefore = new maplibregl.Map({
       container: swipeContainerRef.current,
       fadeDuration: 0,
-      maxTileCacheSize: 300,
+      maxTileCacheSize: 500,
       renderWorldCopies: false,
       dragRotate: false,
       touchPitch: false,
+      maxZoom: 21,
+      minZoom: 9,
       style: {
         version: 8,
         sources: {
@@ -496,6 +503,7 @@ export const GeospatialMap: React.FC = () => {
             type: 'raster',
             tiles: GOOGLE_SATELLITE_TILES,
             tileSize: 256,
+            maxzoom: 20,
             attribution: '© Google Maps'
           },
           'gee-2017-baseline': {
@@ -547,7 +555,15 @@ export const GeospatialMap: React.FC = () => {
             source: 'gee-2017-baseline',
             layout: { visibility: showSatelliteOverlay ? 'visible' : 'none' },
             paint: {
-              'raster-opacity': 0.35,
+              'raster-opacity': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 0.40,
+                13.5, 0.28,
+                14.5, 0.12,
+                15.5, 0.0
+              ],
               'raster-resampling': 'linear'
             }
           },
@@ -582,7 +598,8 @@ export const GeospatialMap: React.FC = () => {
           {
             id: 'before-labels',
             type: 'raster',
-            source: 'esri-labels-before'
+            source: 'esri-labels-before',
+            layout: { visibility: 'none' }
           }
         ]
       },
@@ -630,7 +647,16 @@ export const GeospatialMap: React.FC = () => {
         const isTarget = y === currentYear && showSatelliteOverlay;
         map.setLayoutProperty(layerId, 'visibility', isTarget ? 'visible' : 'none');
         if (isTarget) {
-          map.setPaintProperty(layerId, 'raster-opacity', 0.60);
+          // Smooth zoom interpolation: visible at regional overview, fades out at zoom > 14.5 so high-res Google Satellite is 100% clear
+          map.setPaintProperty(layerId, 'raster-opacity', [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            10, 0.45,
+            13.5, 0.30,
+            14.5, 0.12,
+            15.5, 0.0
+          ]);
         }
       }
     });
@@ -672,7 +698,16 @@ export const GeospatialMap: React.FC = () => {
         map.setPaintProperty('base-esri-satellite', 'raster-saturation', 0.0);
       }
     }
-  }, [currentYear, showSatelliteOverlay, layers.satellite, satelliteProvider]);
+
+    // Single source of truth for map labels:
+    // When using Google Hybrid ('google'), Google already includes crisp integrated road vectors & place names.
+    // Esri reference labels ('labels-layer') are ONLY rendered when provider is Esri and layers.labels is enabled,
+    // completely preventing duplicate roads or overlapping text from merging!
+    if (map.getLayer('labels-layer')) {
+      const showEsriLabels = layers.labels && satelliteProvider === 'esri';
+      map.setLayoutProperty('labels-layer', 'visibility', showEsriLabels ? 'visible' : 'none');
+    }
+  }, [currentYear, showSatelliteOverlay, layers.satellite, layers.labels, satelliteProvider]);
 
   // 4. Update Encroachment Mask Opacity
   useEffect(() => {
