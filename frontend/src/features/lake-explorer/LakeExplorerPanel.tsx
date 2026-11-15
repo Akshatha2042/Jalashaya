@@ -95,32 +95,29 @@ export const LakeExplorerPanel: React.FC = () => {
           <div className="grid grid-cols-3 p-1.5 bg-slate-100/70 border-b border-slate-200 text-xs gap-1 font-semibold">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`py-1 rounded-md transition-colors ${
-                statusFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
+              className={`py-1 rounded-md transition-colors ${statusFilter === 'ALL'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               All ({lakes.length})
             </button>
             <button
               onClick={() => setStatusFilter('ENCROACHED')}
-              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${
-                statusFilter === 'ENCROACHED'
-                  ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
-                  : 'text-slate-500 hover:text-red-600'
-              }`}
+              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${statusFilter === 'ENCROACHED'
+                ? 'bg-red-50 text-red-700 border border-red-200 shadow-sm'
+                : 'text-slate-500 hover:text-red-600'
+                }`}
             >
               <AlertTriangle className="w-3 h-3 text-red-500" />
               <span>Encroached ({encroachedCount})</span>
             </button>
             <button
               onClick={() => setStatusFilter('FREE')}
-              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${
-                statusFilter === 'FREE'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm'
-                  : 'text-slate-500 hover:text-emerald-600'
-              }`}
+              className={`py-1 rounded-md flex items-center justify-center space-x-1 transition-colors ${statusFilter === 'FREE'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm'
+                : 'text-slate-500 hover:text-emerald-600'
+                }`}
             >
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span>Free ({freeCount})</span>
@@ -157,11 +154,10 @@ export const LakeExplorerPanel: React.FC = () => {
                 <button
                   key={zone}
                   onClick={() => setSelectedZone(zone === 'ALL' ? null : zone)}
-                  className={`px-2 py-0.5 rounded-full whitespace-nowrap font-medium transition-colors ${
-                    isSelected
-                      ? 'bg-sky-600 text-white font-bold'
-                      : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
-                  }`}
+                  className={`px-2 py-0.5 rounded-full whitespace-nowrap font-medium transition-colors ${isSelected
+                    ? 'bg-sky-600 text-white font-bold'
+                    : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
+                    }`}
                 >
                   {zone}
                 </button>
@@ -182,9 +178,8 @@ export const LakeExplorerPanel: React.FC = () => {
                     selectLake(lake.id);
                     setIsExplorerOpen(false);
                   }}
-                  className={`p-2.5 hover:bg-sky-50/60 cursor-pointer transition-colors flex items-center justify-between ${
-                    isSelected ? 'bg-sky-50 border-l-4 border-sky-600' : ''
-                  }`}
+                  className={`p-2.5 hover:bg-sky-50/60 cursor-pointer transition-colors flex items-center justify-between ${isSelected ? 'bg-sky-50 border-l-4 border-sky-600' : ''
+                    }`}
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center space-x-1.5">

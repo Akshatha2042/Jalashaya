@@ -162,7 +162,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   setSwipePosition: (pos) => set({ swipePosition: pos }),
   maskOpacity: 0.55,
   setMaskOpacity: (opacity) => set({ maskOpacity: opacity }),
-  showSatelliteOverlay: true,
+  showSatelliteOverlay: false,
   setShowSatelliteOverlay: (show) => set({ showSatelliteOverlay: show }),
 
   isExplorerOpen: false,

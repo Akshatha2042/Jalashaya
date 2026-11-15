@@ -25,7 +25,18 @@ export const RestorationLabModal: React.FC = () => {
     }
   }, [activeScreen, selectedLake, lakes, selectLake]);
 
-  if (activeScreen !== 'restoration-lab' || !selectedLake) return null;
+  if (activeScreen !== 'restoration-lab') return null;
+
+  if (!selectedLake) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center space-y-4">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-semibold text-slate-700">Loading Basin Restoration Lab...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">

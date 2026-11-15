@@ -19,6 +19,39 @@ import {
 import { useAppStore } from '../../stores/useAppStore';
 import { GeoJSONGeometry } from '../../types';
 
+// Project vector geometries accurately onto the 1024x640 satellite image coordinate frame
+const projectCoordsToSvg = (
+  geom: GeoJSONGeometry | undefined,
+  bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null,
+  w = 1024,
+  h = 640
+): string => {
+  if (!geom || !geom.coordinates || !bbox) return '';
+
+  const projectPoint = (lon: number, lat: number): [number, number] => {
+    const x = ((lon - bbox.minLon) / (bbox.maxLon - bbox.minLon)) * w;
+    const y = ((bbox.maxLat - lat) / (bbox.maxLat - bbox.minLat)) * h;
+    return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+  };
+
+  const ringToPath = (ring: number[][]): string => {
+    if (!Array.isArray(ring) || ring.length === 0) return '';
+    const pts = ring.map((pt) => projectPoint(pt[0], pt[1]));
+    return `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p) => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
+  };
+
+  try {
+    if (geom.type === 'Polygon') {
+      return geom.coordinates.map(ringToPath).join(' ');
+    } else if (geom.type === 'MultiPolygon') {
+      return geom.coordinates.map((poly: any) => poly.map(ringToPath).join(' ')).join(' ');
+    }
+  } catch {
+    return '';
+  }
+  return '';
+};
+
 export const ComparisonStudioModal: React.FC = () => {
   const {
     activeScreen,
@@ -118,28 +151,6 @@ export const ComparisonStudioModal: React.FC = () => {
     };
   }, [isCurtainDragging]);
 
-  if (activeScreen !== 'comparison-studio') return null;
-
-  if (!selectedLake || isLoadingObservations || observations.length === 0) {
-    return (
-      <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in duration-150">
-          <div className="w-10 h-10 rounded-full border-3 border-sky-600 border-t-transparent animate-spin" />
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Loading Satellite Comparison...</h3>
-            <p className="text-xs text-slate-500 mt-1">Retrieving Sentinel-2 imagery & cadastral measurements...</p>
-          </div>
-          <button
-            onClick={() => setActiveScreen('command-center')}
-            className="text-xs text-slate-400 hover:text-slate-600 underline pt-2"
-          >
-            Return to Map
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Safe observations resolution
   const olderObs =
     observations.find((o) => o.id === comparisonOlderId) || observations[0];
@@ -202,39 +213,6 @@ export const ComparisonStudioModal: React.FC = () => {
     ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
     : '';
 
-  // Project vector geometries accurately onto the 1024x640 satellite image coordinate frame
-  const projectCoordsToSvg = (
-    geom: GeoJSONGeometry | undefined,
-    bbox: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null,
-    w = 1024,
-    h = 640
-  ): string => {
-    if (!geom || !geom.coordinates || !bbox) return '';
-
-    const projectPoint = (lon: number, lat: number): [number, number] => {
-      const x = ((lon - bbox.minLon) / (bbox.maxLon - bbox.minLon)) * w;
-      const y = ((bbox.maxLat - lat) / (bbox.maxLat - bbox.minLat)) * h;
-      return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
-    };
-
-    const ringToPath = (ring: number[][]): string => {
-      if (!Array.isArray(ring) || ring.length === 0) return '';
-      const pts = ring.map((pt) => projectPoint(pt[0], pt[1]));
-      return `M ${pts[0][0]},${pts[0][1]} ` + pts.slice(1).map((p) => `L ${p[0]},${p[1]}`).join(' ') + ' Z';
-    };
-
-    try {
-      if (geom.type === 'Polygon') {
-        return geom.coordinates.map(ringToPath).join(' ');
-      } else if (geom.type === 'MultiPolygon') {
-        return geom.coordinates.map((poly: any) => poly.map(ringToPath).join(' ')).join(' ');
-      }
-    } catch {
-      return '';
-    }
-    return '';
-  };
-
   const oldWaterPath = useMemo(
     () => projectCoordsToSvg(olderObs?.water_extent_geometry || selectedLake?.boundary_geometry, lakeBBox),
     [olderObs, selectedLake, lakeBBox]
@@ -259,6 +237,28 @@ export const ComparisonStudioModal: React.FC = () => {
       runComparison(o.id, n.id);
     }
   };
+
+  if (activeScreen !== 'comparison-studio') return null;
+
+  if (!selectedLake || isLoadingObservations || observations.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in duration-150">
+          <div className="w-10 h-10 rounded-full border-3 border-sky-600 border-t-transparent animate-spin" />
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loading Satellite Comparison...</h3>
+            <p className="text-xs text-slate-500 mt-1">Retrieving Sentinel-2 imagery & cadastral measurements...</p>
+          </div>
+          <button
+            onClick={() => setActiveScreen('command-center')}
+            className="text-xs text-slate-400 hover:text-slate-600 underline pt-2"
+          >
+            Return to Map
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">

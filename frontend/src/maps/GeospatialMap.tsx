@@ -79,7 +79,9 @@ export const GeospatialMap: React.FC = () => {
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       fadeDuration: 0,
-      maxTileCacheSize: 200,
+      maxTileCacheSize: 300,
+      refreshExpiredTiles: false,
+      trackResize: true,
       renderWorldCopies: false,
       style: {
         version: 8,
