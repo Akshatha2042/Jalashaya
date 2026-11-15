@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Layers, CheckCircle, ShieldAlert, Cpu } from 'lucide-react';
+import { X, BookOpen, Layers, CheckCircle, ShieldAlert, Cpu, ExternalLink, Radio, History } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
 export const MethodologyView: React.FC = () => {
@@ -9,7 +9,7 @@ export const MethodologyView: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header in Light Mode */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
           <div className="flex items-center space-x-2.5">
@@ -19,7 +19,7 @@ export const MethodologyView: React.FC = () => {
             <div>
               <h3 className="text-base font-bold text-slate-900">Scientific Methodology & Data Governance</h3>
               <p className="text-xs text-slate-500 font-medium">
-                Remote sensing algorithms, data provenance, and civic verification protocols
+                Remote sensing algorithms, radar SAR cross-validation, and civic verification protocols
               </p>
             </div>
           </div>
@@ -90,10 +90,100 @@ export const MethodologyView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Section 4: Sentinel-1 All-Weather Radar (SAR) & Multi-Sensor Cross-Validation */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2 text-sm font-bold text-sky-700">
+              <Radio className="w-4 h-4" />
+              <span>4. All-Weather Radar SAR (Sentinel-1) Cross-Validation</span>
+            </div>
+            <p className="text-slate-600">
+              While optical sensors (Sentinel-2, Landsat) can be obstructed by dense monsoon cloud cover, 
+              <strong> Sentinel-1 C-band Synthetic Aperture Radar (SAR)</strong> operates day and night in all weather conditions.
+              Smooth water surfaces act as specular reflectors, bouncing microwave radar signals away from the receiver and producing 
+              distinctive low backscatter (&sigma;<sup>0</sup> in dB).
+            </p>
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900">Sentinel-1 Dual Polarization (VV + VH) & Random Forest Benchmark:</span>
+                <span className="font-mono text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-[11px] font-bold">
+                  88.1% - 89.6% Accuracy (Kappa 0.81 - 0.90)
+                </span>
+              </div>
+              <p className="text-slate-600 text-[11px]">
+                Bengaluru dry-season (May) multi-temporal SAR evaluations across 2016–2021 demonstrate consistent water extraction accuracy,
+                overcoming cloud interference and validating optical NDWI observations against Planet/NICFI (4.77m) high-resolution mosaics.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 5: Historical Lake Cascade Context */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2 text-sm font-bold text-sky-700">
+              <History className="w-4 h-4" />
+              <span>5. Historical Context: Kempe Gowda's Cascade Tank Network to Modern Urban Sprawl</span>
+            </div>
+            <p className="text-slate-600">
+              In the 16th Century, Kempe Gowda engineered an intricate network of interconnected cascading lakes across Bengaluru's three main valleys 
+              (Hebbal, Koramangala-Challaghatta, and Vrishabhavati). Surveys document that around <strong>280 tanks and lakes existed in the 1960s</strong>, 
+              which drastically plummeted to <strong>fewer than 80 by 1993</strong> due to rapid urbanization, shopping complexes, and road encroachments.
+              Today, JALASHAYA tracks 185 designated BBMP water bodies to ensure real-time civic accountability and halt further loss.
+            </p>
+          </div>
+
+          {/* Section 6: Authoritative Scientific Citations */}
+          <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2.5">
+            <div className="font-bold text-sky-950 flex items-center space-x-1.5 text-xs">
+              <BookOpen className="w-4 h-4 text-sky-700" />
+              <span>Key Scientific Citations & Authoritative References</span>
+            </div>
+            <ul className="space-y-1.5 text-[11px] text-slate-700">
+              <li className="flex items-start space-x-2">
+                <span className="text-sky-600 font-bold">•</span>
+                <div>
+                  <a
+                    href="https://storymaps.arcgis.com/stories/1e6a0e96459d4601914890da5cd2b0cc"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-sky-800 hover:text-sky-950 hover:underline flex items-center gap-1"
+                  >
+                    <span>Mapping changes in Water Bodies of Bengaluru with Sentinel-1 (ArcGIS StoryMaps)</span>
+                    <ExternalLink className="w-3 h-3 inline" />
+                  </a>
+                  <span className="text-slate-500 block">
+                    Cloud-based SAR C-band Ground Range Detected (GRD) water classification (2016–2021) using Google Earth Engine & Random Forest classifier.
+                  </span>
+                </div>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-sky-600 font-bold">•</span>
+                <div>
+                  <span className="font-semibold text-slate-900">McFeeters, S. K. (1996):</span>
+                  <span className="text-slate-600"> The use of the Normalized Difference Water Index (NDWI) in the delineation of open water features. <em>International Journal of Remote Sensing</em>.</span>
+                </div>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="text-sky-600 font-bold">•</span>
+                <div>
+                  <span className="font-semibold text-slate-900">Geological Survey of India (GSI) & BBMP Lakes Department:</span>
+                  <span className="text-slate-600"> Official cadastral lake boundary registry and Revenue Department Survey settlement maps.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/80 flex justify-end">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/80 flex justify-between items-center">
+          <a
+            href="https://storymaps.arcgis.com/stories/1e6a0e96459d4601914890da5cd2b0cc"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-semibold text-sky-700 hover:text-sky-900 flex items-center gap-1 hover:underline"
+          >
+            <span>Open Sentinel-1 ArcGIS StoryMap</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
           <button
             onClick={() => setActiveScreen('command-center')}
             className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-sm"
