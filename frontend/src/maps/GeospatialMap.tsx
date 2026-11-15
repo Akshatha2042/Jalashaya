@@ -508,6 +508,22 @@ export const GeospatialMap: React.FC = () => {
             type: 'raster',
             tiles: [ESRI_LABELS_URL],
             tileSize: 256
+          },
+          'before-lake-boundary': {
+            type: 'geojson',
+            data: (selectedLake && selectedLake.boundary_geometry)
+              ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: selectedLake.boundary_geometry as any }] }
+              : { type: 'FeatureCollection', features: [] }
+          },
+          'before-water-extent': {
+            type: 'geojson',
+            data: (() => {
+              const baselineObs = observations[0];
+              const geom = baselineObs?.water_extent_geometry || selectedLake?.boundary_geometry;
+              return geom
+                ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: geom as any }] }
+                : { type: 'FeatureCollection', features: [] };
+            })()
           }
         },
         layers: [
@@ -528,10 +544,38 @@ export const GeospatialMap: React.FC = () => {
             id: 'before-satellite',
             type: 'raster',
             source: 'gee-2017-baseline',
-            layout: { visibility: 'visible' },
+            layout: { visibility: showSatelliteOverlay ? 'visible' : 'none' },
             paint: {
-              'raster-opacity': 0.55,
+              'raster-opacity': 0.20,
               'raster-resampling': 'linear'
+            }
+          },
+          {
+            id: 'before-water-fill',
+            type: 'fill',
+            source: 'before-water-extent',
+            paint: {
+              'fill-color': '#0284c7',
+              'fill-opacity': maskOpacity * 0.70
+            }
+          },
+          {
+            id: 'before-water-stroke',
+            type: 'line',
+            source: 'before-water-extent',
+            paint: {
+              'line-color': '#0284c7',
+              'line-width': 2.5
+            }
+          },
+          {
+            id: 'before-lake-cadastre',
+            type: 'line',
+            source: 'before-lake-boundary',
+            paint: {
+              'line-color': '#ef4444',
+              'line-width': 2,
+              'line-dasharray': [2, 2]
             }
           },
           {
@@ -707,7 +751,48 @@ export const GeospatialMap: React.FC = () => {
         waterSource.setData({ type: 'FeatureCollection', features: [] });
       }
     }
-  }, [selectedLake, currentObservation]);
+
+    // Synchronize vector geometries to Before Swipe Map for razor-sharp multi-temporal comparison
+    if (mapBeforeRef.current && mapBeforeRef.current.isStyleLoaded()) {
+      const beforeCadastre = mapBeforeRef.current.getSource('before-lake-boundary') as maplibregl.GeoJSONSource;
+      if (beforeCadastre) {
+        if (selectedLake && selectedLake.boundary_geometry) {
+          beforeCadastre.setData({
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                properties: { name: selectedLake.official_name },
+                geometry: selectedLake.boundary_geometry as any
+              }
+            ]
+          });
+        } else {
+          beforeCadastre.setData({ type: 'FeatureCollection', features: [] });
+        }
+      }
+
+      const beforeWater = mapBeforeRef.current.getSource('before-water-extent') as maplibregl.GeoJSONSource;
+      if (beforeWater) {
+        const baselineObs = observations[0];
+        const geom = baselineObs?.water_extent_geometry || selectedLake?.boundary_geometry;
+        if (geom) {
+          beforeWater.setData({
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                properties: { date: baselineObs?.observation_date || '2017' },
+                geometry: geom as any
+              }
+            ]
+          });
+        } else {
+          beforeWater.setData({ type: 'FeatureCollection', features: [] });
+        }
+      }
+    }
+  }, [selectedLake, currentObservation, observations]);
 
   // 8. Update Comparison Differences
   useEffect(() => {
@@ -908,6 +993,21 @@ export const GeospatialMap: React.FC = () => {
             <span>Esri Maxar</span>
           </button>
         </div>
+
+        {/* 1-Click Fast Direct Google Maps Link */}
+        <a
+          href={
+            selectedLake
+              ? `https://www.google.com/maps/@${selectedLake.latitude},${selectedLake.longitude},16z/data=!3m1!1e3`
+              : 'https://www.google.com/maps/@12.9716,77.5946,12z/data=!3m1!1e3'
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold transition-all shadow-xs"
+          title="Open in official Google Maps for Street View and high-res satellite"
+        >
+          <span>🌐 Maps ↗</span>
+        </a>
 
         <span className="text-slate-300">|</span>
 

@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   TrendingDown,
-  Calendar
+  Calendar,
+  ExternalLink
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -119,12 +120,25 @@ export const LakeTelemetryCard: React.FC = () => {
                 {selectedLake.administrative_zone || 'Bengaluru Urban'} • {selectedLake.custodian || 'BBMP Lakes Department'}
               </p>
             </div>
-            <button
-              onClick={() => setIsTelemetryOpen(false)}
-              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center space-x-1">
+              <a
+                href={`https://www.google.com/maps/@${selectedLake.latitude},${selectedLake.longitude},16z/data=!3m1!1e3`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open directly in Google Maps Satellite View"
+                className="text-emerald-600 hover:text-emerald-700 p-1 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1 text-[11px] font-semibold"
+              >
+                <span>Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <button
+                onClick={() => setIsTelemetryOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 transition-colors"
+                title="Minimize card"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Sub Navigation */}

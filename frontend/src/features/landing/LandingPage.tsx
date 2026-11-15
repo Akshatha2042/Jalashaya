@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Droplets,
   ArrowRight,
@@ -19,6 +19,13 @@ import { useAppStore } from '../../stores/useAppStore';
 
 export const LandingPage: React.FC = () => {
   const { setActiveScreen, selectLake, fetchLakes, lakes, selectedLake } = useAppStore();
+
+  useEffect(() => {
+    document.body.style.overflow = 'auto';
+    return () => {
+      document.body.style.overflow = 'hidden';
+    };
+  }, []);
 
   const handleLaunchMap = (lakeName?: string) => {
     setActiveScreen('command-center');
@@ -45,6 +52,12 @@ export const LandingPage: React.FC = () => {
       currentLakes[0];
     if (match) {
       await selectLake(match.id);
+      const obs = useAppStore.getState().observations;
+      if (obs && obs.length >= 2) {
+        const older = obs[0].id;
+        const newer = obs[obs.length - 1].id;
+        useAppStore.getState().runComparison(older, newer);
+      }
     }
     setActiveScreen('comparison-studio');
   };
@@ -67,7 +80,7 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-sky-100 selection:text-sky-900">
+    <div className="min-h-screen w-full overflow-y-auto bg-slate-50 text-slate-900 font-sans selection:bg-sky-100 selection:text-sky-900 scroll-smooth">
       {/* Floating Header */}
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

@@ -121,6 +121,22 @@ export const Navbar: React.FC = () => {
           <span className="hidden sm:inline">Reset</span>
         </button>
 
+        {/* 1-Click Fast Google Maps Satellite Integration */}
+        <a
+          href={
+            selectedLake
+              ? `https://www.google.com/maps/@${selectedLake.latitude},${selectedLake.longitude},16z/data=!3m1!1e3`
+              : 'https://www.google.com/maps/@12.9716,77.5946,12z/data=!3m1!1e3'
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open Bengaluru in Google Maps (Satellite & 3D Aerial View)"
+          className="flex items-center space-x-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:border-emerald-500 hover:text-emerald-700 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-md transition-all group"
+        >
+          <span className="text-[11px] text-emerald-600 group-hover:scale-110 transition-transform">🌐</span>
+          <span className="hidden sm:inline">Google Maps ↗</span>
+        </a>
+
         {selectedLake && (
           <button
             onClick={() => setIsReportModalOpen(true)}

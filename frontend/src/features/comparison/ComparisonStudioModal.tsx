@@ -89,8 +89,17 @@ export const ComparisonStudioModal: React.FC = () => {
           const bellandur = lakes.find((l) => l.id === 'lake-bellandur') || lakes[0];
           selectLake(bellandur.id);
         } else {
-          fetchLakes();
+          fetchLakes().then(() => {
+            const currentLakes = useAppStore.getState().lakes;
+            const bellandur = currentLakes.find((l) => l.id === 'lake-bellandur') || currentLakes[0];
+            if (bellandur) selectLake(bellandur.id);
+          });
         }
+        return;
+      }
+
+      if (observations.length === 0 && !isLoadingObservations) {
+        selectLake(selectedLake.id);
         return;
       }
 
@@ -116,6 +125,7 @@ export const ComparisonStudioModal: React.FC = () => {
     selectedLake,
     lakes,
     observations,
+    isLoadingObservations,
     comparisonData,
     isLoadingComparison,
     comparisonOlderId,
@@ -301,8 +311,32 @@ export const ComparisonStudioModal: React.FC = () => {
             </div>
           </div>
 
-          {/* View Mode Switcher & Close Button */}
+          {/* View Mode Switcher, Google Maps Link & Close Button */}
           <div className="flex items-center space-x-2">
+            {/* Direct Google Maps Navigation */}
+            <a
+              href={`https://www.google.com/maps/@${selectedLake.latitude},${selectedLake.longitude},16z/data=!3m1!1e3`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold transition-all shadow-xs"
+              title="Open high-resolution satellite imagery on Google Maps"
+            >
+              <span>🌐 Google Maps ↗</span>
+            </a>
+
+            {/* Launch On-Map Fullscreen Swipe Curtain */}
+            <button
+              onClick={() => {
+                setActiveScreen('command-center');
+                setIsSwipeMode(true);
+              }}
+              className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 text-xs font-semibold transition-all shadow-xs"
+              title="Launch Interactive Split-Screen Swipe directly on the 3D Map"
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5" />
+              <span>On-Map Swipe</span>
+            </button>
+
             <div className="flex items-center bg-slate-200/80 p-0.5 rounded-lg text-xs font-semibold">
               <button
                 onClick={() => setViewMode('dual')}
