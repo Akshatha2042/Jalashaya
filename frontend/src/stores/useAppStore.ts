@@ -89,8 +89,8 @@ const getInitialScreen = (): AppScreen => {
   if (typeof window === 'undefined') return 'landing';
   const hash = window.location.hash.toLowerCase();
   if (hash === '#map' || hash === '#digital-twin') return 'command-center';
-  if (hash === '#comparison') return 'comparison-studio';
-  if (hash === '#simulation' || hash === '#simulation-lab' || hash === '#restoration') return 'restoration-lab';
+  if (hash === '#comparison' || hash === '#compare') return 'comparison-studio';
+  if (hash === '#simulation-lab' || hash === '#restoration') return 'restoration-lab';
   if (hash === '#methodology') return 'methodology';
   return 'landing';
 };

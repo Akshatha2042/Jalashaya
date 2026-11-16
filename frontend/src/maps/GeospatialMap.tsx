@@ -559,10 +559,9 @@ export const GeospatialMap: React.FC = () => {
                 'interpolate',
                 ['linear'],
                 ['zoom'],
-                10, 0.40,
-                13.5, 0.28,
-                14.5, 0.12,
-                15.5, 0.0
+                10, 0.35,
+                13.0, 0.20,
+                14.2, 0.0
               ],
               'raster-resampling': 'linear'
             }
@@ -647,15 +646,14 @@ export const GeospatialMap: React.FC = () => {
         const isTarget = y === currentYear && showSatelliteOverlay;
         map.setLayoutProperty(layerId, 'visibility', isTarget ? 'visible' : 'none');
         if (isTarget) {
-          // Smooth zoom interpolation: visible at regional overview, fades out at zoom > 14.5 so high-res Google Satellite is 100% clear
+          // Smooth zoom interpolation: visible at regional overview, fades out at zoom > 14 so high-res Google Satellite is 100% clear
           map.setPaintProperty(layerId, 'raster-opacity', [
             'interpolate',
             ['linear'],
             ['zoom'],
-            10, 0.45,
-            13.5, 0.30,
-            14.5, 0.12,
-            15.5, 0.0
+            10, 0.35,
+            13.0, 0.20,
+            14.2, 0.0
           ]);
         }
       }
