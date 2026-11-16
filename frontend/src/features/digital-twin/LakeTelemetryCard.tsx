@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   Shield,
@@ -42,6 +42,12 @@ export const LakeTelemetryCard: React.FC = () => {
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'layers'>('metrics');
+
+  useEffect(() => {
+    if (selectedLake) {
+      setIsTelemetryOpen(true);
+    }
+  }, [selectedLake?.id, setIsTelemetryOpen]);
 
   if (!selectedLake) return null;
 

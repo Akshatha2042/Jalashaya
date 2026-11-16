@@ -229,7 +229,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   },
 
   selectLake: async (lakeId: string) => {
-    set({ selectedLakeId: lakeId, isLoadingObservations: true });
+    set({ selectedLakeId: lakeId, isLoadingObservations: true, isTelemetryOpen: true });
     try {
       const [lakeDetail, observations] = await Promise.all([
         api.getLake(lakeId),
@@ -243,9 +243,10 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
         observations,
         selectedObservationIndex: lastIdx,
         isLoadingObservations: false,
+        isTelemetryOpen: true,
         cameraTarget: {
           center: [lakeDetail.longitude, lakeDetail.latitude],
-          zoom: is3D ? 16.5 : 14.2,
+          zoom: is3D ? 16.5 : 14.6,
           pitch: is3D ? 68 : 0,
           bearing: is3D ? 42 : 0,
         },

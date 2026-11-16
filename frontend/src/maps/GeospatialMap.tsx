@@ -80,6 +80,65 @@ export const GeospatialMap: React.FC = () => {
   const currentObservation = observations[selectedObservationIndex] || null;
   const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2026';
 
+  const populateLakesData = useCallback((mapInstance: maplibregl.Map, lakesData: typeof lakes) => {
+    if (!mapInstance || !mapInstance.isStyleLoaded() || !lakesData || lakesData.length === 0) return;
+
+    const source = mapInstance.getSource('all-lakes') as maplibregl.GeoJSONSource;
+    if (source) {
+      const features = lakesData
+        .filter((l) => l.boundary_geometry)
+        .map((l) => ({
+          type: 'Feature' as const,
+          id: l.id,
+          properties: {
+            id: l.id,
+            name: l.official_name,
+            area: l.area_hectares,
+            zone: l.administrative_zone || 'Bengaluru',
+            status: l.encroachment_status || 'Free of Intrusion',
+            encroached_area: l.encroached_area_hectares || 0,
+            encroachment_type: l.encroachment_type || '',
+            isEncroached: (l.encroachment_status || '').toLowerCase().includes('encroached')
+          },
+          geometry: l.boundary_geometry as any
+        }));
+
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+    }
+
+    const pointSource = mapInstance.getSource('all-lakes-points') as maplibregl.GeoJSONSource;
+    if (pointSource) {
+      const pointFeatures = lakesData
+        .filter((l) => typeof l.longitude === 'number' && typeof l.latitude === 'number')
+        .map((l) => ({
+          type: 'Feature' as const,
+          id: l.id,
+          properties: {
+            id: l.id,
+            name: l.official_name,
+            area: l.area_hectares,
+            zone: l.administrative_zone || 'Bengaluru',
+            status: l.encroachment_status || 'Free of Intrusion',
+            encroached_area: l.encroached_area_hectares || 0,
+            encroachment_type: l.encroachment_type || '',
+            isEncroached: (l.encroachment_status || '').toLowerCase().includes('encroached')
+          },
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [l.longitude, l.latitude]
+          }
+        }));
+
+      pointSource.setData({
+        type: 'FeatureCollection',
+        features: pointFeatures
+      });
+    }
+  }, []);
+
   // 1. Initialize Main Map
   useEffect(() => {
     if (!mapContainerRef.current || mapMainRef.current) return;
@@ -365,6 +424,11 @@ export const GeospatialMap: React.FC = () => {
         data: { type: 'FeatureCollection', features: [] }
       });
 
+      map.addSource('all-lakes-points', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
       map.addSource('selected-lake-cadastre', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] }
@@ -390,7 +454,7 @@ export const GeospatialMap: React.FC = () => {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Layer 1: All 185 Lake Boundaries (Red for Encroached, Green for Free)
+      // Layer 1A: All 185 Lake Boundaries (Vibrant Polygons)
       map.addLayer({
         id: 'all-lakes-fill',
         type: 'fill',
@@ -402,7 +466,7 @@ export const GeospatialMap: React.FC = () => {
             '#EF4444',
             '#10B981'
           ],
-          'fill-opacity': 0.20
+          'fill-opacity': 0.35
         }
       });
 
@@ -417,8 +481,64 @@ export const GeospatialMap: React.FC = () => {
             '#DC2626',
             '#059669'
           ],
-          'line-width': 2.4,
-          'line-opacity': 0.95
+          'line-width': 2.6,
+          'line-opacity': 1.0
+        }
+      });
+
+      // Layer 1B: Visible Beacon Markers for all 185 Lakes across Bengaluru
+      map.addLayer({
+        id: 'all-lakes-points',
+        type: 'circle',
+        source: 'all-lakes-points',
+        paint: {
+          'circle-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            8, 4.0,
+            11, 6.0,
+            14, 8.5,
+            16, 11.0
+          ],
+          'circle-color': [
+            'case',
+            ['boolean', ['get', 'isEncroached'], false],
+            '#EF4444',
+            '#10B981'
+          ],
+          'circle-stroke-width': 2.2,
+          'circle-stroke-color': '#FFFFFF',
+          'circle-opacity': 0.95
+        }
+      });
+
+      // Layer 1C: Lake Name Labels for all 185 Lakes
+      map.addLayer({
+        id: 'all-lakes-labels',
+        type: 'symbol',
+        source: 'all-lakes-points',
+        minzoom: 10,
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            10, 10,
+            12, 11,
+            14, 12.5,
+            16, 14
+          ],
+          'text-offset': [0, 1.2],
+          'text-anchor': 'top',
+          'text-optional': true
+        },
+        paint: {
+          'text-color': '#0F172A',
+          'text-halo-color': '#FFFFFF',
+          'text-halo-width': 2.0,
+          'text-halo-blur': 0.5
         }
       });
 
@@ -538,44 +658,49 @@ export const GeospatialMap: React.FC = () => {
         className: 'lake-hover-popup'
       });
 
-      map.on('mousemove', 'all-lakes-fill', (e) => {
-        if (e.features && e.features[0]) {
-          map.getCanvas().style.cursor = 'pointer';
-          const p = e.features[0].properties;
-          const isEnc = p?.isEncroached;
-          const statusBadge = isEnc
-            ? `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#fef2f2;color:#b91c1c;font-size:10px;font-weight:700;border:1px solid #fecaca;">
-                <span>⚠️ ${p?.status || 'Encroached'}</span>
-                <span>(${p?.encroached_area} ha lost)</span>
-               </div>`
-            : `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#ecfdf5;color:#047857;font-size:10px;font-weight:700;border:1px solid #a7f3d0;">
-                <span>✓ ${p?.status || 'Free of Intrusion (Restored)'}</span>
-               </div>`;
+      // Universal Click & Hover on all lake layers
+      const interactiveLayers = ['all-lakes-points', 'all-lakes-labels', 'all-lakes-fill', 'all-lakes-line', 'detected-water-fill'];
 
-          hoverPopup
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="background:#ffffff;color:#0f172a;padding:8px 12px;border-radius:10px;font-size:11px;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-family:sans-serif;min-width:180px;">
-                <div style="font-weight:700;font-size:12px;color:#0f172a;margin-bottom:2px;">${p?.name}</div>
-                <div style="color:#64748b;font-size:10px;margin-bottom:6px;">Zone: ${p?.zone || 'Bengaluru'} • Basin: ${p?.area} ha</div>
-                ${statusBadge}
-                <div style="margin-top:6px;font-size:9.5px;color:#94a3b8;">Click to zoom & inspect multi-temporal change</div>
-              </div>
-            `)
-            .addTo(map);
-        }
-      });
+      interactiveLayers.forEach((layerId) => {
+        map.on('mousemove', layerId, (e) => {
+          if (e.features && e.features[0]) {
+            map.getCanvas().style.cursor = 'pointer';
+            const p = e.features[0].properties;
+            const isEnc = p?.isEncroached === true || p?.isEncroached === 'true' || (typeof p?.status === 'string' && p.status.toLowerCase().includes('encroached'));
+            const statusBadge = isEnc
+              ? `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#fef2f2;color:#b91c1c;font-size:10px;font-weight:700;border:1px solid #fecaca;">
+                  <span>⚠️ ${p?.status || 'Encroached'}</span>
+                  <span>(${p?.encroached_area || 0} ha lost)</span>
+                 </div>`
+              : `<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;background:#ecfdf5;color:#047857;font-size:10px;font-weight:700;border:1px solid #a7f3d0;">
+                  <span>✓ ${p?.status || 'Free of Intrusion (Restored)'}</span>
+                 </div>`;
 
-      map.on('mouseleave', 'all-lakes-fill', () => {
-        map.getCanvas().style.cursor = '';
-        hoverPopup.remove();
-      });
+            hoverPopup
+              .setLngLat(e.lngLat)
+              .setHTML(`
+                <div style="background:#ffffff;color:#0f172a;padding:8px 12px;border-radius:10px;font-size:11px;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-family:sans-serif;min-width:180px;">
+                  <div style="font-weight:700;font-size:12px;color:#0f172a;margin-bottom:2px;">${p?.name}</div>
+                  <div style="color:#64748b;font-size:10px;margin-bottom:6px;">Zone: ${p?.zone || 'Bengaluru'} • Basin: ${p?.area} ha</div>
+                  ${statusBadge}
+                  <div style="margin-top:6px;font-size:9.5px;color:#0284c7;font-weight:600;">👆 Click to open lake telemetry & satellite history</div>
+                </div>
+              `)
+              .addTo(map);
+          }
+        });
 
-      map.on('click', 'all-lakes-fill', (e) => {
-        if (e.features && e.features[0]) {
-          const featureId = e.features[0].properties?.id;
-          if (featureId) selectLake(featureId);
-        }
+        map.on('mouseleave', layerId, () => {
+          map.getCanvas().style.cursor = '';
+          hoverPopup.remove();
+        });
+
+        map.on('click', layerId, (e) => {
+          if (e.features && e.features[0]) {
+            const featureId = e.features[0].properties?.id;
+            if (featureId) selectLake(featureId);
+          }
+        });
       });
 
       map.on('click', 'lost-water-fill', (e) => {
@@ -593,6 +718,12 @@ export const GeospatialMap: React.FC = () => {
           `)
           .addTo(map);
       });
+
+      // Immediately populate all 185 lakes if already loaded in store
+      const currentLakes = useAppStore.getState().lakes;
+      if (currentLakes && currentLakes.length > 0) {
+        populateLakesData(map, currentLakes);
+      }
     });
 
     mapMainRef.current = map;
@@ -842,51 +973,27 @@ export const GeospatialMap: React.FC = () => {
     }
   }, [maskOpacity]);
 
-  // 5. Update All 185 Lakes GeoJSON
+  // 5. Update All 185 Lakes GeoJSON (Polygons + Point Markers + Labels)
   useEffect(() => {
     if (!mapMainRef.current) return;
     const map = mapMainRef.current;
     if (!map.isStyleLoaded()) return;
 
-    const source = map.getSource('all-lakes') as maplibregl.GeoJSONSource;
-    if (source && lakes.length > 0) {
-      const features = lakes
-        .filter((l) => l.boundary_geometry)
-        .map((l) => ({
-          type: 'Feature' as const,
-          id: l.id,
-          properties: {
-            id: l.id,
-            name: l.official_name,
-            area: l.area_hectares,
-            zone: l.administrative_zone,
-            status: l.encroachment_status || 'Free of Intrusion',
-            encroached_area: l.encroached_area_hectares || 0,
-            encroachment_type: l.encroachment_type || '',
-            isEncroached: (l.encroachment_status || '').toLowerCase().includes('encroached')
-          },
-          geometry: l.boundary_geometry as any
-        }));
+    populateLakesData(map, lakes);
+  }, [lakes, populateLakesData]);
 
-      source.setData({
-        type: 'FeatureCollection',
-        features
-      });
-    }
-  }, [lakes]);
-
-  // 6. Update Camera Target (Always Locked to True North: bearing 0, pitch 0)
+  // 6. Update Camera Target (True North locked in 2D, tilt supported in 3D perspective)
   useEffect(() => {
     if (!mapMainRef.current || !cameraTarget) return;
     mapMainRef.current.flyTo({
       center: cameraTarget.center,
       zoom: cameraTarget.zoom,
-      pitch: 0,
-      bearing: 0,
+      pitch: isHuman3DView ? (cameraTarget.pitch ?? 68) : 0,
+      bearing: isHuman3DView ? (cameraTarget.bearing ?? 42) : 0,
       duration: 1800,
       essential: true
     });
-  }, [cameraTarget]);
+  }, [cameraTarget, isHuman3DView]);
 
   // 7. Update Selected Lake Cadastre & Detected Water Extent
   useEffect(() => {
