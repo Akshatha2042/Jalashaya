@@ -76,9 +76,11 @@ export const Navbar: React.FC = () => {
           onClick={() => setActiveScreen('landing')}
           className="flex items-center space-x-2 bg-white/95 backdrop-blur-xl border border-slate-200/90 px-3 py-1.5 rounded-xl shadow-sm hover:shadow-md transition-all text-left group"
         >
-          <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-sky-600 to-cyan-500 text-white shadow-xs">
-            <Waves className="w-3.5 h-3.5 font-bold" />
-          </div>
+          <img
+            src="/jalashaya_logo.png"
+            alt="Jalashaya Logo"
+            className="w-6 h-6 object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+          />
           <div>
             <span className="font-bold text-xs tracking-wider text-slate-900 group-hover:text-sky-600 transition-colors">JALASHAYA</span>
             <span className="text-[9px] font-mono text-sky-700 ml-1 uppercase font-bold bg-sky-50 px-1 py-0.2 rounded border border-sky-200">Twin</span>

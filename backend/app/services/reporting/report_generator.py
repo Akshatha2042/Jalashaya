@@ -1,6 +1,8 @@
 import json
 import csv
 import io
+import base64
+from pathlib import Path
 from typing import Dict, Any, List
 
 class ReportGenerator:
@@ -147,6 +149,11 @@ class ReportGenerator:
 
         area_loss = abs(round(comparison['area_change_hectares'], 1))
         pct_change = comparison['change_percentage']
+
+        logo_b64 = ""
+        logo_path = Path("frontend/public/jalashaya_logo.png")
+        if logo_path.exists():
+            logo_b64 = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -375,7 +382,10 @@ class ReportGenerator:
 <body>
     <div class="header">
         <div>
-            <div class="brand">JALASHAYA</div>
+            <div class="brand" style="display:flex;align-items:center;gap:12px;">
+                {f'<img src="data:image/png;base64,{logo_b64}" style="width:40px;height:40px;object-fit:contain;" alt="Jalashaya Logo" />' if logo_b64 else ''}
+                <span>JALASHAYA</span>
+            </div>
             <div class="tagline">Karnataka Water Body Digital Twin & Satellite Change Detection Platform</div>
             <div class="doc-title">Scientific Satellite Change & Legal Verification Dossier</div>
             <div style="font-size: 13px; color: #64748B;">

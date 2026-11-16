@@ -81,7 +81,7 @@ export const GeospatialMap: React.FC = () => {
   const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2026';
 
   const populateLakesData = useCallback((mapInstance: maplibregl.Map, lakesData: typeof lakes) => {
-    if (!mapInstance || !mapInstance.isStyleLoaded() || !lakesData || lakesData.length === 0) return;
+    if (!mapInstance || !lakesData || lakesData.length === 0) return;
 
     const source = mapInstance.getSource('all-lakes') as maplibregl.GeoJSONSource;
     if (source) {
@@ -154,6 +154,7 @@ export const GeospatialMap: React.FC = () => {
       minZoom: 9,
       style: {
         version: 8,
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
         sources: {
           'google-satellite': {
             type: 'raster',
@@ -514,33 +515,37 @@ export const GeospatialMap: React.FC = () => {
       });
 
       // Layer 1C: Lake Name Labels for all 185 Lakes
-      map.addLayer({
-        id: 'all-lakes-labels',
-        type: 'symbol',
-        source: 'all-lakes-points',
-        minzoom: 10,
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-size': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            10, 10,
-            12, 11,
-            14, 12.5,
-            16, 14
-          ],
-          'text-offset': [0, 1.2],
-          'text-anchor': 'top',
-          'text-optional': true
-        },
-        paint: {
-          'text-color': '#0F172A',
-          'text-halo-color': '#FFFFFF',
-          'text-halo-width': 2.0,
-          'text-halo-blur': 0.5
-        }
-      });
+      try {
+        map.addLayer({
+          id: 'all-lakes-labels',
+          type: 'symbol',
+          source: 'all-lakes-points',
+          minzoom: 10,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              10, 10,
+              12, 11,
+              14, 12.5,
+              16, 14
+            ],
+            'text-offset': [0, 1.2],
+            'text-anchor': 'top',
+            'text-optional': true
+          },
+          paint: {
+            'text-color': '#0F172A',
+            'text-halo-color': '#FFFFFF',
+            'text-halo-width': 2.0,
+            'text-halo-blur': 0.5
+          }
+        });
+      } catch (err) {
+        console.warn('Could not initialize lake labels layer:', err);
+      }
 
       // Layer 2: Selected Lake Cadastral Basin Boundary with Contrast Halo
       map.addLayer({
@@ -727,6 +732,7 @@ export const GeospatialMap: React.FC = () => {
     });
 
     mapMainRef.current = map;
+    (window as any).__map = map;
 
     return () => {
       map.remove();
@@ -760,6 +766,7 @@ export const GeospatialMap: React.FC = () => {
       minZoom: 9,
       style: {
         version: 8,
+        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
         sources: {
           'sentinel-2017-baseline': {
             type: 'raster',
@@ -976,10 +983,7 @@ export const GeospatialMap: React.FC = () => {
   // 5. Update All 185 Lakes GeoJSON (Polygons + Point Markers + Labels)
   useEffect(() => {
     if (!mapMainRef.current) return;
-    const map = mapMainRef.current;
-    if (!map.isStyleLoaded()) return;
-
-    populateLakesData(map, lakes);
+    populateLakesData(mapMainRef.current, lakes);
   }, [lakes, populateLakesData]);
 
   // 6. Update Camera Target (True North locked in 2D, tilt supported in 3D perspective)

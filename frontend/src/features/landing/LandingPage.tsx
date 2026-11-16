@@ -85,9 +85,11 @@ export const LandingPage: React.FC = () => {
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
-              <Droplets className="w-5 h-5" />
-            </div>
+            <img
+              src="/jalashaya_logo.png"
+              alt="Jalashaya Logo"
+              className="w-10 h-10 object-contain drop-shadow-md hover:scale-105 transition-transform"
+            />
             <div>
               <span className="font-bold text-lg text-slate-900 tracking-tight flex items-center gap-1.5">
                 JALASHAYA <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 font-semibold border border-sky-200">Twin</span>
@@ -412,7 +414,10 @@ export const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="bg-slate-50 border-t border-slate-200 py-8 text-xs text-slate-500 text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 JALASHAYA Project • Civic Water Body Watch for Greater Bengaluru.</p>
+          <div className="flex items-center gap-2">
+            <img src="/jalashaya_logo.png" alt="Jalashaya Logo" className="w-5 h-5 object-contain" />
+            <p>© 2026 JALASHAYA Project • Civic Water Body Watch for Greater Bengaluru.</p>
+          </div>
           <p>Data sources: OpenStreetMap, BBMP Lake Cadastre, Copernicus Sentinel-2 MSI, EC JRC.</p>
         </div>
       </footer>

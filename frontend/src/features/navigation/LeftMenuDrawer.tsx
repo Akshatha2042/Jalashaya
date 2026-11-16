@@ -75,8 +75,8 @@ export const LeftMenuDrawer: React.FC = () => {
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-sky-600 flex items-center justify-center text-white shadow-sm">
-                  <BarChart3 className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center p-1 shadow-sm">
+                  <img src="/jalashaya_logo.png" alt="Jalashaya Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">Control Hub & Analytics</h3>
@@ -95,33 +95,30 @@ export const LeftMenuDrawer: React.FC = () => {
             <div className="flex border-b border-slate-200 text-xs font-semibold bg-slate-100/60 p-1 gap-1">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
-                  activeTab === 'dashboard'
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${activeTab === 'dashboard'
                     ? 'bg-white text-sky-600 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span>Dashboard Analysis</span>
               </button>
               <button
                 onClick={() => setActiveTab('simulation')}
-                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
-                  activeTab === 'simulation'
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${activeTab === 'simulation'
                     ? 'bg-white text-sky-600 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
                 <span>Simulation Lab</span>
               </button>
               <button
                 onClick={() => setActiveTab('tools')}
-                className={`py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
-                  activeTab === 'tools'
+                className={`py-2 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition-all ${activeTab === 'tools'
                     ? 'bg-white text-sky-600 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <span>Tools</span>
               </button>

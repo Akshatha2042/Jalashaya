@@ -177,8 +177,8 @@ export const ResearchLabModal: React.FC = () => {
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 text-white">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
-              <FlaskConical className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-white/10 p-1 flex items-center justify-center text-white shadow-lg border border-white/20">
+              <img src="/jalashaya_logo.png" alt="Jalashaya Logo" className="w-full h-full object-contain drop-shadow" />
             </div>
             <div>
               <div className="flex items-center space-x-2">

@@ -216,14 +216,34 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   fetchLakes: async () => {
     set({ isLoadingLakes: true });
     try {
-      const lakes = await api.getLakes();
-      set({ lakes, isLoadingLakes: false });
-      if (!get().selectedLakeId && lakes.length > 0) {
+      let lakes = await api.getLakes();
+      if (!lakes || lakes.length === 0) {
+        const res = await fetch('/lakes.json');
+        if (res.ok) {
+          lakes = await res.json();
+        }
+      }
+      set({ lakes: lakes || [], isLoadingLakes: false });
+      if (!get().selectedLakeId && lakes && lakes.length > 0) {
         const bellandur = lakes.find((l) => l.id === 'lake-bellandur') || lakes[0];
         get().selectLake(bellandur.id);
       }
     } catch (err) {
-      console.error('Failed to load lakes', err);
+      console.warn('Backend API getLakes unreachable, loading local lakes.json cache', err);
+      try {
+        const res = await fetch('/lakes.json');
+        if (res.ok) {
+          const fallbackLakes = await res.json();
+          set({ lakes: fallbackLakes, isLoadingLakes: false });
+          if (!get().selectedLakeId && fallbackLakes.length > 0) {
+            const bellandur = fallbackLakes.find((l: any) => l.id === 'lake-bellandur') || fallbackLakes[0];
+            get().selectLake(bellandur.id);
+          }
+          return;
+        }
+      } catch (fErr) {
+        console.error('Failed to load fallback lakes.json', fErr);
+      }
       set({ isLoadingLakes: false });
     }
   },
@@ -259,8 +279,23 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
         get().runComparison(older, newer);
       }
     } catch (err) {
-      console.error('Failed to select lake', err);
-      set({ isLoadingObservations: false });
+      console.error('Failed to select lake from API, using cached state', err);
+      const fallbackLake = get().lakes.find((l) => l.id === lakeId);
+      if (fallbackLake) {
+        set({
+          selectedLake: fallbackLake as any,
+          isLoadingObservations: false,
+          isTelemetryOpen: true,
+          cameraTarget: {
+            center: [fallbackLake.longitude, fallbackLake.latitude],
+            zoom: 14.6,
+            pitch: 0,
+            bearing: 0,
+          },
+        });
+      } else {
+        set({ isLoadingObservations: false });
+      }
     }
   },
 
