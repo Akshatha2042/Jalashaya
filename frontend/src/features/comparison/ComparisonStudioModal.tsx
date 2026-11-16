@@ -374,6 +374,26 @@ export const ComparisonStudioModal: React.FC = () => {
         {/* Date Selector & Preset Toolbar */}
         <div className="px-4 py-3 bg-slate-100/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Lake Selector across all 185 Bengaluru Lakes */}
+            <div className="flex items-center space-x-1.5">
+              <label className="text-[10px] font-mono uppercase text-slate-500 font-bold">
+                Lake ({lakes.length}):
+              </label>
+              <select
+                value={selectedLake.id}
+                onChange={(e) => selectLake(e.target.value)}
+                className="bg-white border border-slate-300 text-slate-900 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-sky-500 shadow-xs font-bold cursor-pointer max-w-[200px] truncate"
+              >
+                {lakes.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.official_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="text-slate-300">|</span>
+
             <div className="flex items-center space-x-2">
               <label className="text-[10px] font-mono uppercase text-slate-500 font-bold">
                 Baseline (Year 1):
@@ -462,7 +482,8 @@ export const ComparisonStudioModal: React.FC = () => {
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {viewMode === 'dual' ? (
             /* Mode 1: Dual Photographic Side-by-Side Cards */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Year 1 Card (Baseline Pristine View) */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
@@ -697,8 +718,17 @@ export const ComparisonStudioModal: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Caption Matching User Research Reference Specification */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3 text-center text-xs text-slate-600 font-sans shadow-xs">
+              <p>
+                <strong>Source:</strong> Planet NICFI / Copernicus Sentinel-1 C-SAR basemap from May 01, {oldYear} (left) and May 01, {newYear} (right). Swipe to observe the disappearance of water from the lake.
+              </p>
+            </div>
+            </>
           ) : (
             /* Mode 2: In-Modal Interactive Split-Screen Curtain Swipe */
+            <>
             <div className="space-y-2">
               <div
                 ref={curtainBoxRef}
@@ -793,6 +823,14 @@ export const ComparisonStudioModal: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Caption Matching User Research Reference Specification */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3 text-center text-xs text-slate-600 font-sans shadow-xs">
+              <p>
+                <strong>Source:</strong> Planet NICFI / Copernicus Sentinel-1 C-SAR basemap from May 01, {oldYear} (left) and May 01, {newYear} (right). Swipe to observe the disappearance of water from the lake.
+              </p>
+            </div>
+            </>
           )}
 
           {/* Metric Highlights & Civic Audit Verdict */}

@@ -74,6 +74,8 @@ interface AppStoreState {
   setIsReportModalOpen: (open: boolean) => void;
   isPredictionModalOpen: boolean;
   setIsPredictionModalOpen: (open: boolean) => void;
+  isResearchModalOpen: boolean;
+  setIsResearchModalOpen: (open: boolean) => void;
   isHuman3DView: boolean;
   toggleHuman3DView: () => void;
 
@@ -181,6 +183,8 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   setIsReportModalOpen: (open) => set({ isReportModalOpen: open }),
   isPredictionModalOpen: false,
   setIsPredictionModalOpen: (open) => set({ isPredictionModalOpen: open }),
+  isResearchModalOpen: false,
+  setIsResearchModalOpen: (open) => set({ isResearchModalOpen: open }),
   isHuman3DView: false,
   toggleHuman3DView: () => {
     const next = !get().isHuman3DView;

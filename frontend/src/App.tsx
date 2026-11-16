@@ -11,6 +11,7 @@ import { RestorationLabModal } from './features/restoration/RestorationLabModal'
 import { EvidenceReportModal } from './features/reports/EvidenceReportModal';
 import { MethodologyView } from './features/methodology/MethodologyView';
 import { GroqPredictionModal } from './features/predictions/GroqPredictionModal';
+import { ResearchLabModal } from './features/research/ResearchLabModal';
 import { LandingPage } from './features/landing/LandingPage';
 
 export const App: React.FC = () => {
@@ -104,6 +105,7 @@ export const App: React.FC = () => {
       <EvidenceReportModal />
       <MethodologyView />
       <GroqPredictionModal />
+      <ResearchLabModal />
 
       {/* Subtle initial loading splash in Light Theme */}
       {isLoadingLakes && (

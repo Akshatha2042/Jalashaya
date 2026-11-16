@@ -8,7 +8,8 @@ import {
   RotateCcw,
   FileText,
   Home,
-  SplitSquareVertical
+  SplitSquareVertical,
+  FlaskConical
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { AppScreen } from '../types';
@@ -28,7 +29,8 @@ export const Navbar: React.FC = () => {
     isSwipeMode,
     setIsSwipeMode,
     isHuman3DView,
-    toggleHuman3DView
+    toggleHuman3DView,
+    setIsResearchModalOpen
   } = useAppStore();
 
   const handleNavClick = async (screen: AppScreen) => {
@@ -182,11 +184,21 @@ export const Navbar: React.FC = () => {
           <span className="hidden lg:inline">Reset</span>
         </button>
 
+        {/* Scientific Research Lab */}
+        <button
+          onClick={() => setIsResearchModalOpen(true)}
+          className="flex items-center space-x-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-sm shadow-sky-600/20 transition-all cursor-pointer"
+          title="Open Peer-Reviewed Scientific Research Framework & Sentinel-1 Experiments"
+        >
+          <FlaskConical className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Research Lab</span>
+        </button>
+
         {/* Audit Report */}
         {selectedLake && (
           <button
             onClick={() => setIsReportModalOpen(true)}
-            className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs shadow-sm shadow-sky-600/20 transition-all"
+            className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs shadow-sm shadow-sky-600/20 transition-all cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Report</span>
