@@ -70,8 +70,8 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="absolute top-3 left-4 right-4 z-40 flex items-center justify-between pointer-events-none">
-      {/* 1. Left: Brand & Civic Encroachment Audit Pill */}
-      <div className="flex items-center space-x-2 pointer-events-auto">
+      {/* 1. Left: Brand & Navigation Tabs in a single compact unified cluster */}
+      <div className="flex items-center space-x-2 pointer-events-auto shrink-0">
         <button
           onClick={() => setActiveScreen('landing')}
           className="flex items-center space-x-2 bg-white/95 backdrop-blur-xl border border-slate-200/90 px-3 py-1.5 rounded-xl shadow-sm hover:shadow-md transition-all text-left group"
@@ -85,50 +85,35 @@ export const Navbar: React.FC = () => {
           </div>
         </button>
 
-        {/* Civic Encroachment Audit Indicator */}
-        <div className="hidden lg:flex items-center space-x-2 bg-white/95 backdrop-blur-xl border border-slate-200/90 px-2.5 py-1.5 rounded-xl shadow-sm text-[11px] font-medium text-slate-600">
-          <div className="flex items-center space-x-1">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="font-bold text-red-600 font-mono">{encroachedCount}</span>
-            <span>Encroached</span>
-          </div>
-          <span className="text-slate-300">|</span>
-          <div className="flex items-center space-x-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-bold text-emerald-600 font-mono">{freeCount}</span>
-            <span>Free</span>
-          </div>
-        </div>
+        {/* Screen Navigation Tabs */}
+        <nav className="flex items-center space-x-0.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 p-0.5 rounded-xl shadow-sm">
+          {navItems.map((item) => {
+            const isActive = activeScreen === item.screen;
+            return (
+              <button
+                key={item.screen}
+                onClick={() => handleNavClick(item.screen)}
+                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-sky-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {item.icon}
+                <span className="hidden md:inline">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* 2. Center: Screen Navigation Tabs */}
-      <nav className="flex items-center space-x-1 bg-white/95 backdrop-blur-xl border border-slate-200/90 p-1 rounded-xl shadow-sm pointer-events-auto">
-        {navItems.map((item) => {
-          const isActive = activeScreen === item.screen;
-          return (
-            <button
-              key={item.screen}
-              onClick={() => handleNavClick(item.screen)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                isActive
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {item.icon}
-              <span className="hidden md:inline">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* 3. Right: Satellite Provider, Swipe Curtain, Reset & Report */}
+      {/* 2. Right: Satellite Provider, Tools & Actions */}
       <div className="flex items-center space-x-1.5 pointer-events-auto shrink-0">
         {/* Map Provider Toggle: Sentinel-2 vs Google HD vs Esri Maxar */}
         <div className="hidden lg:flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/90 shadow-xs text-[11px] font-semibold whitespace-nowrap">
           <button
             onClick={() => setSatelliteProvider('sentinel')}
-            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
               satelliteProvider === 'sentinel'
                 ? 'bg-sky-600 text-white shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
@@ -148,7 +133,7 @@ export const Navbar: React.FC = () => {
             title="Google Maps Ultra-HD Hybrid Satellite (2026 High-Res)"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Google HD</span>
+            <span>Google</span>
           </button>
           <button
             onClick={() => setSatelliteProvider('esri')}
@@ -167,7 +152,7 @@ export const Navbar: React.FC = () => {
         {/* Swipe Curtain Toggle */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs whitespace-nowrap transition-all ${
+          className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs whitespace-nowrap transition-all ${
             isSwipeMode
               ? 'bg-sky-600 text-white shadow-sky-600/20'
               : 'bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-700 hover:bg-slate-50'
@@ -175,7 +160,7 @@ export const Navbar: React.FC = () => {
           title="Compare 2017 baseline vs contemporary satellite photos with an interactive swipe curtain"
         >
           <SplitSquareVertical className="w-3.5 h-3.5 text-sky-600" />
-          <span className="hidden xl:inline">{isSwipeMode ? 'Exit Swipe' : 'Swipe Curtain'}</span>
+          <span className="hidden xl:inline">{isSwipeMode ? 'Exit Swipe' : 'Swipe'}</span>
         </button>
 
         {/* 3D Human Road View Perspective Toggle */}
@@ -195,10 +180,9 @@ export const Navbar: React.FC = () => {
         <button
           onClick={resetCameraToBengaluru}
           title="Reset Camera to Bengaluru Overview"
-          className="flex items-center space-x-1 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 p-1.5 lg:px-2 rounded-xl text-xs font-medium shadow-xs transition-colors whitespace-nowrap"
+          className="flex items-center space-x-1 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 p-1.5 rounded-xl text-xs font-medium shadow-xs transition-colors whitespace-nowrap"
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-          <span className="hidden 2xl:inline">Reset</span>
         </button>
 
         {/* Scientific Research Lab */}
@@ -208,7 +192,7 @@ export const Navbar: React.FC = () => {
           title="Open Peer-Reviewed Scientific Research Framework & Sentinel-1 Experiments"
         >
           <FlaskConical className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Research Lab</span>
+          <span className="hidden md:inline">Research Lab</span>
         </button>
 
         {/* Audit Report */}
@@ -218,7 +202,7 @@ export const Navbar: React.FC = () => {
             className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-2.5 py-1.5 rounded-xl text-xs shadow-xs shadow-sky-600/20 transition-all cursor-pointer whitespace-nowrap"
           >
             <FileText className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Report</span>
+            <span className="hidden md:inline">Report</span>
           </button>
         )}
       </div>
