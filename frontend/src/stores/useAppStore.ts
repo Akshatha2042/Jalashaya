@@ -69,9 +69,13 @@ interface AppStoreState {
   isLayersOpen: boolean;
   setIsLayersOpen: (open: boolean) => void;
 
-  // Modals
+  // Modals & 3D Human Perspective
   isReportModalOpen: boolean;
   setIsReportModalOpen: (open: boolean) => void;
+  isPredictionModalOpen: boolean;
+  setIsPredictionModalOpen: (open: boolean) => void;
+  isHuman3DView: boolean;
+  toggleHuman3DView: () => void;
 
   // Actions
   fetchLakes: () => Promise<void>;
@@ -175,6 +179,35 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   systemHealth: null,
   isReportModalOpen: false,
   setIsReportModalOpen: (open) => set({ isReportModalOpen: open }),
+  isPredictionModalOpen: false,
+  setIsPredictionModalOpen: (open) => set({ isPredictionModalOpen: open }),
+  isHuman3DView: false,
+  toggleHuman3DView: () => {
+    const next = !get().isHuman3DView;
+    set({ isHuman3DView: next });
+    const { selectedLake } = get();
+    if (selectedLake) {
+      if (next) {
+        set({
+          cameraTarget: {
+            center: [selectedLake.longitude, selectedLake.latitude],
+            zoom: 16.5,
+            pitch: 68,
+            bearing: 42
+          }
+        });
+      } else {
+        set({
+          cameraTarget: {
+            center: [selectedLake.longitude, selectedLake.latitude],
+            zoom: 14.5,
+            pitch: 0,
+            bearing: 0
+          }
+        });
+      }
+    }
+  },
 
   fetchLakes: async () => {
     set({ isLoadingLakes: true });
@@ -200,6 +233,7 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
       ]);
 
       const lastIdx = observations.length > 0 ? observations.length - 1 : 0;
+      const is3D = get().isHuman3DView;
       set({
         selectedLake: lakeDetail,
         observations,
@@ -207,9 +241,9 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
         isLoadingObservations: false,
         cameraTarget: {
           center: [lakeDetail.longitude, lakeDetail.latitude],
-          zoom: 14.2,
-          pitch: 0,
-          bearing: 0,
+          zoom: is3D ? 16.5 : 14.2,
+          pitch: is3D ? 68 : 0,
+          bearing: is3D ? 42 : 0,
         },
       });
 

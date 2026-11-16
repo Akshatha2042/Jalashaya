@@ -83,6 +83,16 @@ export const api = {
     return response.json();
   },
 
+  async predictLakeAi(lakeId: string, scenario: string = 'status_quo', targetYear: number = 2030): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/lakes/${lakeId}/ai-predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario, target_year: targetYear })
+    });
+    if (!response.ok) throw new Error('Failed to compute AI digital twin prediction');
+    return response.json();
+  },
+
   getReportHtmlUrl(lakeId: string, olderId?: string, newerId?: string): string {
     const params = new URLSearchParams();
     if (olderId) params.append('older_obs_id', olderId);

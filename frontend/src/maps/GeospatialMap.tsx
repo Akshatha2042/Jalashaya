@@ -66,7 +66,9 @@ export const GeospatialMap: React.FC = () => {
     showSatelliteOverlay,
     setShowSatelliteOverlay,
     satelliteProvider,
-    setSatelliteProvider
+    setSatelliteProvider,
+    isHuman3DView,
+    toggleHuman3DView
   } = useAppStore();
 
   const currentObservation = observations[selectedObservationIndex] || null;
@@ -1027,6 +1029,15 @@ export const GeospatialMap: React.FC = () => {
             <span className="text-[10px] text-red-600 font-mono font-bold">(-{lostArea.toFixed(1)} ha Encroached • {currentArea.toFixed(1)} ha Active)</span>
           </div>
         </>
+      )}
+
+      {/* 3D Human Road Perspective Status Badge */}
+      {isHuman3DView && selectedLake && !isSwipeMode && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/90 backdrop-blur-md text-white border border-amber-500/50 rounded-full px-4 py-1.5 text-xs shadow-xl flex items-center space-x-2 animate-in fade-in slide-in-from-top-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          <span className="font-bold text-amber-300">🚶‍♂️ 3D Human Road Perspective:</span>
+          <span className="font-mono text-slate-200">Pitch 68° • Sub-meter Street Level ({selectedLake.official_name})</span>
+        </div>
       )}
     </div>
   );

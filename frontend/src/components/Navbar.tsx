@@ -26,7 +26,9 @@ export const Navbar: React.FC = () => {
     satelliteProvider,
     setSatelliteProvider,
     isSwipeMode,
-    setIsSwipeMode
+    setIsSwipeMode,
+    isHuman3DView,
+    toggleHuman3DView
   } = useAppStore();
 
   const handleNavClick = async (screen: AppScreen) => {
@@ -155,6 +157,19 @@ export const Navbar: React.FC = () => {
         >
           <SplitSquareVertical className="w-3.5 h-3.5 text-sky-600" />
           <span className="hidden sm:inline">{isSwipeMode ? 'Exit Swipe' : 'Swipe Curtain'}</span>
+        </button>
+
+        {/* 3D Human Road View Perspective Toggle */}
+        <button
+          onClick={toggleHuman3DView}
+          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-all ${
+            isHuman3DView
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-amber-500/20'
+              : 'bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-700 hover:bg-slate-50'
+          }`}
+          title="Toggle 3D Human Road Perspective: Ground level view of perimeter roads, buffer zones, and surrounding buildings"
+        >
+          <span>{isHuman3DView ? '🚶‍♂️ 3D Road View' : '🦅 2D Top'}</span>
         </button>
 
         {/* Reset View */}

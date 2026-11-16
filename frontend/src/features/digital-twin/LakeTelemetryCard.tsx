@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   TrendingDown,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  Zap
 } from 'lucide-react';
 import { useAppStore } from '../../stores/useAppStore';
 
@@ -34,7 +35,10 @@ export const LakeTelemetryCard: React.FC = () => {
     setIsTelemetryOpen,
     satelliteProvider,
     setSatelliteProvider,
-    runComparison
+    runComparison,
+    setIsPredictionModalOpen,
+    isHuman3DView,
+    toggleHuman3DView
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'metrics' | 'layers'>('metrics');
@@ -385,8 +389,20 @@ export const LakeTelemetryCard: React.FC = () => {
               </div>
             )}
 
+            {/* Groq AI Future Simulation Button */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setIsPredictionModalOpen(true)}
+                className="w-full py-2 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold rounded-xl text-center transition-all flex items-center justify-center space-x-1.5 shadow-sm shadow-orange-500/20 text-xs cursor-pointer"
+                title="Run Groq LPU hydro-ecological prediction simulation for this lake"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>⚡ Groq AI Simulation & Predict</span>
+              </button>
+            </div>
+
             {/* Quick Action Footer Buttons */}
-            <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-100 text-xs">
+            <div className="grid grid-cols-3 gap-1.5 pt-1.5 text-xs">
               <button
                 onClick={() => {
                   if (observations.length >= 2) {
@@ -403,10 +419,12 @@ export const LakeTelemetryCard: React.FC = () => {
                 <span>Comparison</span>
               </button>
               <button
-                onClick={() => setActiveScreen('restoration-lab')}
-                className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-center font-semibold transition-colors"
+                onClick={() => setIsPredictionModalOpen(true)}
+                className="py-1.5 px-2 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-800 border border-amber-300 rounded-lg text-center font-bold transition-colors flex items-center justify-center space-x-1 cursor-pointer shadow-sm"
+                title="Groq AI Hydro-Ecological Future Simulation"
               >
-                Simulation
+                <Zap className="w-3 h-3 text-amber-600 fill-amber-600" />
+                <span>AI Predict</span>
               </button>
               <button
                 onClick={() => setIsReportModalOpen(true)}
