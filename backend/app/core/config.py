@@ -1,7 +1,29 @@
 import os
-from typing import List, Optional
+import shutil
+import json
+from typing import List, Optional, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+def get_default_database_url() -> str:
+    # Handle Vercel / AWS Lambda serverless read-only filesystem
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        tmp_db = "/tmp/jalashaya.db"
+        src_db = os.path.join(ROOT_DIR, "jalashaya.db")
+        if not os.path.exists(tmp_db) and os.path.exists(src_db):
+            try:
+                shutil.copy2(src_db, tmp_db)
+            except Exception:
+                pass
+        if os.path.exists(tmp_db):
+            return f"sqlite:///{tmp_db}"
+
+    src_db = os.path.join(ROOT_DIR, "jalashaya.db")
+    if os.path.exists(src_db):
+        return f"sqlite:///{src_db.replace(os.sep, '/')}"
+    return "sqlite:///./jalashaya.db"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -18,7 +40,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Database
-    DATABASE_URL: str = "sqlite:///./jalashaya.db"
+    DATABASE_URL: str = Field(default_factory=get_default_database_url)
     DB_ECHO: bool = False
 
     # CORS
@@ -26,8 +48,25 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
-        "http://localhost:8000"
+        "http://localhost:8000",
+        "https://*.vercel.app"
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            if v.strip() == "*":
+                return ["*"]
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, (list, set, tuple)):
+            return list(v)
+        return ["*"]
 
     # Google Earth Engine
     GEE_ENABLED: bool = False

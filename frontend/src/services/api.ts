@@ -6,7 +6,11 @@ import {
   RestorationSimulation
 } from '../types';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? '/api/v1'
+    : 'http://localhost:8000/api/v1');
 
 export const api = {
   async getLakes(search?: string, zone?: string): Promise<LakeSummary[]> {
