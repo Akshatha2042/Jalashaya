@@ -92,7 +92,7 @@ export const LakeTelemetryCard: React.FC = () => {
   const thresholdY = chartHeight - padY - (thresholdAreaVal / maxArea) * (chartHeight - 2 * padY);
 
   return (
-    <aside className="absolute top-[60px] right-4 z-30 pointer-events-auto">
+    <aside className="absolute top-[66px] right-4 z-30 pointer-events-auto">
       {/* 1. Minimized Pill */}
       {!isTelemetryOpen ? (
         <button

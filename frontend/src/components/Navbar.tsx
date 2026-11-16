@@ -123,12 +123,12 @@ export const Navbar: React.FC = () => {
       </nav>
 
       {/* 3. Right: Satellite Provider, Swipe Curtain, Reset & Report */}
-      <div className="flex items-center space-x-2 pointer-events-auto">
+      <div className="flex items-center space-x-1.5 pointer-events-auto shrink-0">
         {/* Map Provider Toggle: Sentinel-2 vs Google HD vs Esri Maxar */}
-        <div className="hidden md:flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/90 shadow-xs text-[11px] font-semibold">
+        <div className="hidden lg:flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/90 shadow-xs text-[11px] font-semibold whitespace-nowrap">
           <button
             onClick={() => setSatelliteProvider('sentinel')}
-            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               satelliteProvider === 'sentinel'
                 ? 'bg-sky-600 text-white shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
@@ -136,11 +136,11 @@ export const Navbar: React.FC = () => {
             title={`Copernicus Sentinel-2 (${currentYear}) Multi-Spectral Optical Satellite Imagery`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-sky-300 animate-pulse" />
-            <span>🛰️ Sentinel-2 ({currentYear})</span>
+            <span>Sentinel-2 ({currentYear})</span>
           </button>
           <button
             onClick={() => setSatelliteProvider('google')}
-            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
+            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
               satelliteProvider === 'google'
                 ? 'bg-white text-emerald-700 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-900'
@@ -152,7 +152,7 @@ export const Navbar: React.FC = () => {
           </button>
           <button
             onClick={() => setSatelliteProvider('esri')}
-            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
+            className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
               satelliteProvider === 'esri'
                 ? 'bg-white text-sky-700 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-900'
@@ -167,7 +167,7 @@ export const Navbar: React.FC = () => {
         {/* Swipe Curtain Toggle */}
         <button
           onClick={() => setIsSwipeMode(!isSwipeMode)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition-all ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs whitespace-nowrap transition-all ${
             isSwipeMode
               ? 'bg-sky-600 text-white shadow-sky-600/20'
               : 'bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-700 hover:bg-slate-50'
@@ -175,36 +175,36 @@ export const Navbar: React.FC = () => {
           title="Compare 2017 baseline vs contemporary satellite photos with an interactive swipe curtain"
         >
           <SplitSquareVertical className="w-3.5 h-3.5 text-sky-600" />
-          <span className="hidden sm:inline">{isSwipeMode ? 'Exit Swipe' : 'Swipe Curtain'}</span>
+          <span className="hidden xl:inline">{isSwipeMode ? 'Exit Swipe' : 'Swipe Curtain'}</span>
         </button>
 
         {/* 3D Human Road View Perspective Toggle */}
         <button
           onClick={toggleHuman3DView}
-          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-all ${
+          className={`flex items-center space-x-1 px-2 py-1.5 rounded-xl text-xs font-semibold shadow-xs whitespace-nowrap transition-all ${
             isHuman3DView
               ? 'bg-amber-500 text-slate-950 font-bold shadow-amber-500/20'
               : 'bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-700 hover:bg-slate-50'
           }`}
           title="Toggle 3D Human Road Perspective: Ground level view of perimeter roads, buffer zones, and surrounding buildings"
         >
-          <span>{isHuman3DView ? '🚶‍♂️ 3D Road View' : '🦅 2D Top'}</span>
+          <span>{isHuman3DView ? '🚶‍♂️ 3D' : '🦅 2D'}</span>
         </button>
 
         {/* Reset View */}
         <button
           onClick={resetCameraToBengaluru}
           title="Reset Camera to Bengaluru Overview"
-          className="flex items-center space-x-1.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-medium shadow-sm transition-colors"
+          className="flex items-center space-x-1 bg-white/95 backdrop-blur-xl border border-slate-200/90 hover:bg-slate-50 text-slate-700 p-1.5 lg:px-2 rounded-xl text-xs font-medium shadow-xs transition-colors whitespace-nowrap"
         >
           <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-          <span className="hidden lg:inline">Reset</span>
+          <span className="hidden 2xl:inline">Reset</span>
         </button>
 
         {/* Scientific Research Lab */}
         <button
           onClick={() => setIsResearchModalOpen(true)}
-          className="flex items-center space-x-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-sm shadow-sky-600/20 transition-all cursor-pointer"
+          className="flex items-center space-x-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-bold px-2.5 py-1.5 rounded-xl text-xs shadow-xs shadow-sky-600/20 transition-all cursor-pointer whitespace-nowrap"
           title="Open Peer-Reviewed Scientific Research Framework & Sentinel-1 Experiments"
         >
           <FlaskConical className="w-3.5 h-3.5" />
@@ -215,7 +215,7 @@ export const Navbar: React.FC = () => {
         {selectedLake && (
           <button
             onClick={() => setIsReportModalOpen(true)}
-            className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-xl text-xs shadow-sm shadow-sky-600/20 transition-all cursor-pointer"
+            className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold px-2.5 py-1.5 rounded-xl text-xs shadow-xs shadow-sky-600/20 transition-all cursor-pointer whitespace-nowrap"
           >
             <FileText className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Report</span>

@@ -1162,25 +1162,7 @@ export const GeospatialMap: React.FC = () => {
         </div>
       )}
 
-      {/* Active Satellite Provider Indicator Badge */}
-      {!isSwipeMode && (
-        <div className="absolute top-4 left-4 z-20 pointer-events-auto bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl px-3 py-1.5 shadow-md flex items-center space-x-2.5 text-slate-800">
-          <div className="flex items-center space-x-1.5">
-            <span className={`w-2 h-2 rounded-full ${satelliteProvider === 'sentinel' ? 'bg-sky-500 animate-pulse' : 'bg-emerald-500'}`} />
-            <span className="text-xs font-bold text-slate-900">
-              {satelliteProvider === 'sentinel'
-                ? `🛰️ Copernicus Sentinel-2 (${currentYear})`
-                : satelliteProvider === 'google'
-                ? '🌍 Google HD (2026)'
-                : '🛰️ Esri Maxar (High-Res)'}
-            </span>
-          </div>
-          <span className="text-slate-300">|</span>
-          <span className="text-[10px] font-mono font-medium text-slate-500">
-            {satelliteProvider === 'sentinel' ? 'Authentic Multi-Spectral Pass' : 'Sub-Meter Ortho'}
-          </span>
-        </div>
-      )}
+
     </div>
   );
 };

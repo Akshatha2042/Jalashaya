@@ -57,7 +57,7 @@ export const LeftMenuDrawer: React.FC = () => {
   return (
     <>
       {/* Floating Analytics Trigger Button on the Left */}
-      <div className="absolute top-[60px] left-4 z-40">
+      <div className="absolute top-[66px] left-4 z-40">
         <button
           onClick={() => setIsOpen(true)}
           className="flex items-center space-x-1.5 bg-white/95 hover:bg-white text-slate-800 border border-slate-200/90 shadow-sm hover:shadow-md rounded-xl px-2.5 py-1.5 text-xs font-semibold backdrop-blur-md transition-all group"
