@@ -88,7 +88,7 @@ export const LakeTelemetryCard: React.FC = () => {
   const thresholdY = chartHeight - padY - (thresholdAreaVal / maxArea) * (chartHeight - 2 * padY);
 
   return (
-    <aside className="absolute top-[62px] right-4 z-30 pointer-events-auto">
+    <aside className="absolute top-[60px] right-4 z-30 pointer-events-auto">
       {/* 1. Minimized Pill */}
       {!isTelemetryOpen ? (
         <button
@@ -107,7 +107,7 @@ export const LakeTelemetryCard: React.FC = () => {
         </button>
       ) : (
         /* 2. Expanded Detail Card in Clean Light Theme */
-        <div className="w-80 sm:w-96 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="w-80 sm:w-96 max-h-[calc(100vh-160px)] flex flex-col bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="p-3.5 border-b border-slate-100 flex items-start justify-between bg-slate-50/70">
             <div>
