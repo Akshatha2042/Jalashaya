@@ -336,6 +336,17 @@ export const LakeTelemetryCard: React.FC = () => {
                   <span className="font-medium text-slate-700">Aerial Imagery Provider</span>
                   <div className="flex items-center bg-white p-0.5 rounded-md border border-slate-200 text-[10px]">
                     <button
+                      onClick={() => setSatelliteProvider('sentinel')}
+                      className={`px-2 py-0.5 rounded transition-all font-semibold ${
+                        satelliteProvider === 'sentinel'
+                          ? 'bg-sky-600 text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Copernicus Sentinel-2 Multi-Spectral Optical Imagery"
+                    >
+                      Sentinel-2
+                    </button>
+                    <button
                       onClick={() => setSatelliteProvider('google')}
                       className={`px-2 py-0.5 rounded transition-all font-semibold ${
                         satelliteProvider === 'google'

@@ -30,8 +30,13 @@ export const Navbar: React.FC = () => {
     setIsSwipeMode,
     isHuman3DView,
     toggleHuman3DView,
-    setIsResearchModalOpen
+    setIsResearchModalOpen,
+    observations,
+    selectedObservationIndex
   } = useAppStore();
+
+  const currentObservation = observations[selectedObservationIndex] || null;
+  const currentYear = currentObservation ? currentObservation.observation_date.split('-')[0] : '2026';
 
   const handleNavClick = async (screen: AppScreen) => {
     if (screen === 'comparison-studio' || screen === 'restoration-lab') {
@@ -119,8 +124,20 @@ export const Navbar: React.FC = () => {
 
       {/* 3. Right: Satellite Provider, Swipe Curtain, Reset & Report */}
       <div className="flex items-center space-x-2 pointer-events-auto">
-        {/* Map Provider Toggle: Google Maps vs Esri */}
+        {/* Map Provider Toggle: Sentinel-2 vs Google HD vs Esri Maxar */}
         <div className="hidden md:flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/90 shadow-xs text-[11px] font-semibold">
+          <button
+            onClick={() => setSatelliteProvider('sentinel')}
+            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+              satelliteProvider === 'sentinel'
+                ? 'bg-sky-600 text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            title={`Copernicus Sentinel-2 (${currentYear}) Multi-Spectral Optical Satellite Imagery`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-300 animate-pulse" />
+            <span>🛰️ Sentinel-2 ({currentYear})</span>
+          </button>
           <button
             onClick={() => setSatelliteProvider('google')}
             className={`px-2 py-1 rounded-lg transition-all flex items-center gap-1 ${
