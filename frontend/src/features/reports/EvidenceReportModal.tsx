@@ -74,8 +74,38 @@ export const EvidenceReportModal: React.FC = () => {
 
   const satelliteImgUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${minLon},${minLat},${maxLon},${maxLat}&bboxSR=4326&imageSR=4326&size=800,500&f=image`;
 
+  const isBellandur =
+    selectedLake.id === 'lake-bellandur' ||
+    selectedLake.official_name.toLowerCase().includes('bellandur');
+
+  const getSentinelWmsUrl = (year: string) => {
+    const minx = (minLon * 20037508.34) / 180;
+    const miny =
+      (Math.log(Math.tan(((90 + minLat) * Math.PI) / 360)) / (Math.PI / 180)) *
+      (20037508.34 / 180);
+    const maxx = (maxLon * 20037508.34) / 180;
+    const maxy =
+      (Math.log(Math.tan(((90 + maxLat) * Math.PI) / 360)) / (Math.PI / 180)) *
+      (20037508.34 / 180);
+    const layer =
+      year === '2016' || year === '2017'
+        ? 's2cloudless-2017_3857'
+        : ['2018', '2019', '2020', '2021', '2022', '2023', '2024'].includes(year)
+        ? `s2cloudless-${year}_3857`
+        : 's2cloudless-2024_3857';
+    return `https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=${layer}&format=image/jpeg&srs=EPSG:3857&bbox=${minx},${miny},${maxx},${maxy}&width=1024&height=640`;
+  };
+
   const oldYear = comparisonData ? comparisonData.older_date.split('-')[0] : '2016';
   const newYear = comparisonData ? comparisonData.newer_date.split('-')[0] : '2021';
+
+  const baselineImgUrl = isBellandur
+    ? '/satellite_baseline_2016_bellandur.jpg'
+    : getSentinelWmsUrl(oldYear);
+
+  const contemporaryImgUrl = isBellandur
+    ? '/satellite_contemporary_2021_bellandur.jpg'
+    : getSentinelWmsUrl(newYear);
   const oldArea = comparisonData ? comparisonData.area_old_hectares.toFixed(1) : selectedLake.area_hectares.toFixed(1);
   const newArea = comparisonData
     ? comparisonData.area_new_hectares.toFixed(1)
@@ -240,10 +270,13 @@ export const EvidenceReportModal: React.FC = () => {
                 {/* Left: Historical Baseline (May 2016) */}
                 <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden border border-slate-300 bg-slate-950 shadow-inner group">
                   <img
-                    src={satelliteImgUrl}
+                    src={baselineImgUrl}
                     alt={`Baseline ${oldYear}`}
                     className="w-full h-full object-cover"
-                    style={{ filter: 'contrast(1.1) saturate(1.22) hue-rotate(-8deg)' }}
+                    style={{ filter: isBellandur ? 'none' : 'contrast(1.1) saturate(1.22) hue-rotate(-8deg)' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = satelliteImgUrl;
+                    }}
                   />
                   <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-white border border-white/20 px-3 py-1 rounded-xl text-xs font-mono font-bold shadow-md">
                     🛰️ May 01, {oldYear} (Left)
@@ -257,10 +290,13 @@ export const EvidenceReportModal: React.FC = () => {
                 {/* Right: Contemporary Pass (May 2021 / 2026) */}
                 <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden border border-red-300 bg-slate-950 shadow-inner group">
                   <img
-                    src={satelliteImgUrl}
+                    src={contemporaryImgUrl}
                     alt={`Contemporary ${newYear}`}
                     className="w-full h-full object-cover"
-                    style={{ filter: 'contrast(1.18) saturate(0.85) sepia(0.25)' }}
+                    style={{ filter: isBellandur ? 'none' : 'contrast(1.18) saturate(0.85) sepia(0.25)' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = satelliteImgUrl;
+                    }}
                   />
                   <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md text-white border border-white/20 px-3 py-1 rounded-xl text-xs font-mono font-bold shadow-md">
                     🛰️ May 01, {newYear} (Right)

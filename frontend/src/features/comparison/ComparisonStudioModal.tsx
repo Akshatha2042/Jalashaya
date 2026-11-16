@@ -223,6 +223,40 @@ export const ComparisonStudioModal: React.FC = () => {
     ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${lakeBBox.minLon},${lakeBBox.minLat},${lakeBBox.maxLon},${lakeBBox.maxLat}&bboxSR=4326&imageSR=4326&size=1024,640&f=image`
     : '';
 
+  const isBellandur =
+    selectedLake?.id === 'lake-bellandur' ||
+    selectedLake?.official_name?.toLowerCase().includes('bellandur');
+
+  // Convert lat/lon bounding box to EPSG:3857 coordinates for Sentinel-2 WMS
+  const getSentinelWmsUrl = (year: string) => {
+    if (!lakeBBox) return highResSatelliteUrl;
+    const minx = (lakeBBox.minLon * 20037508.34) / 180;
+    const miny =
+      (Math.log(Math.tan(((90 + lakeBBox.minLat) * Math.PI) / 360)) / (Math.PI / 180)) *
+      (20037508.34 / 180);
+    const maxx = (lakeBBox.maxLon * 20037508.34) / 180;
+    const maxy =
+      (Math.log(Math.tan(((90 + lakeBBox.maxLat) * Math.PI) / 360)) / (Math.PI / 180)) *
+      (20037508.34 / 180);
+    const layer =
+      year === '2016' || year === '2017'
+        ? 's2cloudless-2017_3857'
+        : ['2018', '2019', '2020', '2021', '2022', '2023', '2024'].includes(year)
+        ? `s2cloudless-${year}_3857`
+        : 's2cloudless-2024_3857';
+    return `https://tiles.maps.eox.at/wms?service=WMS&version=1.1.1&request=GetMap&layers=${layer}&format=image/jpeg&srs=EPSG:3857&bbox=${minx},${miny},${maxx},${maxy}&width=1024&height=640`;
+  };
+
+  // Baseline satellite image (Left) - authentic historical satellite photography
+  const baselineSatelliteUrl = isBellandur
+    ? '/satellite_baseline_2016_bellandur.jpg'
+    : getSentinelWmsUrl(oldYear);
+
+  // Contemporary satellite image (Right) - authentic contemporary satellite photography showing shrinkage/dry bed
+  const contemporarySatelliteUrl = isBellandur
+    ? '/satellite_contemporary_2021_bellandur.jpg'
+    : getSentinelWmsUrl(newYear);
+
   const oldWaterPath = useMemo(
     () => projectCoordsToSvg(olderObs?.water_extent_geometry || selectedLake?.boundary_geometry, lakeBBox),
     [olderObs, selectedLake, lakeBBox]
@@ -501,12 +535,15 @@ export const ComparisonStudioModal: React.FC = () => {
                 {/* Satellite Imagery Frame with Pristine Water Mask */}
                 <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
                   <img
-                    src={highResSatelliteUrl}
+                    src={baselineSatelliteUrl}
                     alt={`${selectedLake.official_name} ${oldYear}`}
                     className="w-full h-full object-cover transition-transform duration-200"
                     style={{
                       transform: `scale(${oldZoom})`,
-                      filter: 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)'
+                      filter: isBellandur ? 'none' : 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)'
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = highResSatelliteUrl;
                     }}
                     loading="eager"
                   />
@@ -604,12 +641,15 @@ export const ComparisonStudioModal: React.FC = () => {
                 {/* Satellite Imagery Frame with Contracted Water & Red Encroached Settlement Highlight */}
                 <div className="relative h-64 md:h-72 rounded-xl overflow-hidden border border-slate-300 bg-slate-900 select-none shadow-inner group">
                   <img
-                    src={highResSatelliteUrl}
+                    src={contemporarySatelliteUrl}
                     alt={`${selectedLake.official_name} ${newYear}`}
                     className="w-full h-full object-cover transition-transform duration-200"
                     style={{
                       transform: `scale(${newZoom})`,
-                      filter: 'contrast(1.15) saturate(1.15) brightness(1.02)'
+                      filter: isBellandur ? 'none' : 'contrast(1.15) saturate(1.15) brightness(1.02)'
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = highResSatelliteUrl;
                     }}
                     loading="eager"
                   />
@@ -744,10 +784,13 @@ export const ComparisonStudioModal: React.FC = () => {
                   style={{ clipPath: `inset(0 ${100 - curtainPos}% 0 0)` }}
                 >
                   <img
-                    src={highResSatelliteUrl}
+                    src={baselineSatelliteUrl}
                     alt="Baseline 2017"
                     className="w-full h-full object-cover"
-                    style={{ filter: 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)' }}
+                    style={{ filter: isBellandur ? 'none' : 'contrast(1.05) saturate(1.08) hue-rotate(-5deg)' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = highResSatelliteUrl;
+                    }}
                   />
                   {oldWaterPath && (
                     <svg
@@ -774,10 +817,13 @@ export const ComparisonStudioModal: React.FC = () => {
                   style={{ clipPath: `inset(0 0 0 ${curtainPos}%)` }}
                 >
                   <img
-                    src={highResSatelliteUrl}
+                    src={contemporarySatelliteUrl}
                     alt="Contemporary 2026"
                     className="w-full h-full object-cover"
-                    style={{ filter: 'contrast(1.15) saturate(1.15) brightness(1.02)' }}
+                    style={{ filter: isBellandur ? 'none' : 'contrast(1.15) saturate(1.15) brightness(1.02)' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = highResSatelliteUrl;
+                    }}
                   />
                   <svg
                     viewBox="0 0 1024 640"
